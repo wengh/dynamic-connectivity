@@ -6,7 +6,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Pii = System.Tuple<int, int>;
 
-namespace com.github.btrekkie.connectivity.test
+namespace Connectivity.test
 {
 //JAVA TO C# CONVERTER TODO TASK: This Java 'import static' statement cannot be converted to C#:
 //	import static org.junit.Assert.assertEquals;
@@ -87,21 +87,28 @@ namespace com.github.btrekkie.connectivity.test
 
 		[Theory]
 		[InlineData(100000, 300000, 100000, 100000, 11439)]
-		[InlineData(10000, 600000, 100000, 100000, 1184)]
+		[InlineData(1000, 3000, 1000, 1000, 159475)]
+		[InlineData(10000, 300000, 100000, 100000, 1184)]
 		public void testBenchmark(int nV, int nE, int nQ, int nO, int seed)
 		{
 			var swA = new Stopwatch();
 			var swD = new Stopwatch();
 			var swQ = new Stopwatch();
-			int nT = 0;
-			int nF = 0;
+			int nT = 0; // number of queries returning true
+			int nF = 0; // number of queries returning false
+			int hash = 0;
 
-			int nD = nO / 2;
-			int nA = nO - nD;
+			int nD = nO / 2; // number of deletions
+			int nA = nO - nD; // number of additions
+			int maxE = nV * (nV - 1) / 2;
 
 			var rand = new Random(seed);
 			var rand2 = new Random(seed);
+
+			swA.Start();
 			var graph = new ConnGraph();
+			swA.Stop();
+
 			var V = new ConnVertex[nV];
 			for (int i = 0; i < nV; i++)
 			{
@@ -153,9 +160,13 @@ namespace com.github.btrekkie.connectivity.test
 			log.WriteLine("");
 			log.WriteLine($"nT: {nT}");
 			log.WriteLine($"nF: {nF}");
+			log.WriteLine($"hash: {hash}");
 
 			Pii AddRandomEdge()
 			{
+				if (EList.Count == maxE)
+					return new Pii(-1, -1);
+
 				while (true)
 				{
 					int a1 = rand.Next(1, nV);
@@ -174,11 +185,14 @@ namespace com.github.btrekkie.connectivity.test
 
 			Pii DeleteRandomEdge()
 			{
-				int i1 = rand.Next(0, EList.Count);
+				int count = EList.Count;
+				if (count == 0)
+					return new Pii(-1, -1);
+				int i1 = rand.Next(0, count);
 				var pii = EList[i1];
 				E.Remove(pii);
-				EList[i1] = EList[EList.Count - 1];
-				EList.RemoveAt(EList.Count - 1);
+				EList[i1] = EList[count - 1];
+				EList.RemoveAt(count - 1);
 				swD.Start();
 				graph.removeEdge(V[pii.Item1], V[pii.Item2]);
 				swD.Stop();
@@ -194,6 +208,7 @@ namespace com.github.btrekkie.connectivity.test
 				bool result = graph.connected(V[a1], V[b1]);
 				swQ.Stop();
 
+				hash = hash * 31 + (result ? 402653189 : 786433);
 				if (result)
 					nT++;
 				else
@@ -210,7 +225,7 @@ namespace com.github.btrekkie.connectivity.test
 				int j = rand.Next(0, i + 1);
 				T temp = list[i];
 				list[i] = list[j];
-				list[j] = list[i];
+				list[j] = temp;
 			}
 		}
 

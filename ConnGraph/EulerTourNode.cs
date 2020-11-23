@@ -1,6 +1,6 @@
 ﻿using com.github.btrekkie.red_black_node;
 
-namespace com.github.btrekkie.connectivity
+namespace Connectivity
 {
 	/// <summary>
 	/// A node in an Euler tour tree for ConnGraph (at some particular level i). See the comments for the implementation of

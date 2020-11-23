@@ -1,4 +1,4 @@
-﻿namespace com.github.btrekkie.connectivity
+﻿namespace Connectivity
 {
 	/// <summary>
 	/// The representation of a forest edge in some Euler tour forest F_i at some particular level i. Each forest edge has

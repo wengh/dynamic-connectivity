@@ -1,4 +1,4 @@
-﻿namespace com.github.btrekkie.connectivity
+﻿namespace Connectivity
 {
 	/// <summary>
 	/// Represents an edge in a ConnGraph, at the level of the edge (i.e. at the lowest level i for which G_i contains the

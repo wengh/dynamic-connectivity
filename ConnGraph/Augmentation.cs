@@ -1,4 +1,4 @@
-﻿namespace com.github.btrekkie.connectivity
+﻿namespace Connectivity
 {
 	/// <summary>
 	/// A combining function for taking the augmentations associated with a set of ConnVertices and reducing them to a single

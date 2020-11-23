@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace com.github.btrekkie.connectivity.test
+namespace Connectivity.test
 {
 	/// <summary>
 	/// Stores two values: a sum and a maximum. Used for testing augmentation in ConnGraph. </summary>

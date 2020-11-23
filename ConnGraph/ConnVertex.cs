@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading;
 
-namespace com.github.btrekkie.connectivity
+namespace Connectivity
 {
 
 	/// <summary>

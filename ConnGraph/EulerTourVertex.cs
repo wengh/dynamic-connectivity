@@ -1,4 +1,4 @@
-﻿namespace com.github.btrekkie.connectivity
+﻿namespace Connectivity
 {
 	/// <summary>
 	/// The representation of a ConnVertex at some particular level i. Each vertex has one EulerTourVertex object for each

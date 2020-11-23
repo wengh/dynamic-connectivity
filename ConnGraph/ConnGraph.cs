@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace com.github.btrekkie.connectivity
+namespace Connectivity
 {
 
 	/// <summary>
