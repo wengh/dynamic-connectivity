@@ -87,13 +87,19 @@ namespace Connectivity.test
 		[InlineData(100000, 300000, 100000, 100000, 11439)]
 		[InlineData(1000, 3000, 1000, 1000, 159475)]
 		[InlineData(10000, 300000, 100000, 100000, 1184)]
+		// [InlineData(100000, 300000, 100000, 100000, 0)]
+		// [InlineData(1000, 3000, 1000, 1000, 0)]
+		// [InlineData(10000, 300000, 100000, 100000, 0)]
 		public void TestBenchmark(int nV, int nE, int nQ, int nO, int seed)
 		{
-			var swA = new Stopwatch();
-			var swD = new Stopwatch();
-			var swQ = new Stopwatch();
-			int nT = 0; // number of queries returning true
-			int nF = 0; // number of queries returning false
+			if (seed == 0)
+			{
+				seed = new Random().Next();
+			}
+
+			var swA = new PerformanceMeasurement(10);
+			var swD = new PerformanceMeasurement(10);
+			var swQ = new PerformanceMeasurement(1);
 			int hash = 0;
 
 			int nD = nO / 2; // number of deletions
@@ -101,16 +107,17 @@ namespace Connectivity.test
 			int maxE = nV * (nV - 1) / 2;
 
 			var rand = new Random(seed);
-			var rand2 = new Random(seed);
+			var rand2 = new Random(seed + 31);
 
 			swA.Start();
-			var graph = new ConnGraph();
+			var graph = new ConnGraph(SumAndMax.augmentation);
 			swA.Stop();
 
 			var V = new ConnVertex[nV];
 			for (int i = 0; i < nV; i++)
 			{
 				V[i] = new ConnVertex(rand2);
+				graph.SetVertexAugmentation(V[i], new SumAndMax(1, 1));
 			}
 
 			var E = new HashSet<Pii>();
@@ -119,7 +126,7 @@ namespace Connectivity.test
 			{
 				AddRandomEdge();
 			}
-			_log.WriteLine($"Init time: {swA.Elapsed.TotalMilliseconds}\n");
+			_log.WriteLine($"Init time:   {swA}\n");
 			swA.Reset();
 
 			char[] O = new char[nO + nQ];
@@ -152,18 +159,16 @@ namespace Connectivity.test
 						break;
 				}
 			}
-			_log.WriteLine($"Add time: {swA.Elapsed.TotalMilliseconds}");
-			_log.WriteLine($"Delete time: {swD.Elapsed.TotalMilliseconds}");
-			_log.WriteLine($"Query time: {swQ.Elapsed.TotalMilliseconds}");
+			_log.WriteLine($"Add time:    {swA}");
+			_log.WriteLine($"Delete time: {swD}");
+			_log.WriteLine($"Query time:  {swQ}");
 			_log.WriteLine("");
-			_log.WriteLine($"nT: {nT}");
-			_log.WriteLine($"nF: {nF}");
 			_log.WriteLine($"hash: {hash}");
 
-			Pii AddRandomEdge()
+			void AddRandomEdge()
 			{
 				if (EList.Count == maxE)
-					return new Pii(-1, -1);
+					return;
 
 				while (true)
 				{
@@ -176,16 +181,16 @@ namespace Connectivity.test
 						swA.Start();
 						graph.AddEdge(V[a1], V[b1]);
 						swA.Stop();
-						return pii;
+						return;
 					}
 				}
 			}
 
-			Pii DeleteRandomEdge()
+			void DeleteRandomEdge()
 			{
 				int count = EList.Count;
 				if (count == 0)
-					return new Pii(-1, -1);
+					return;
 				int i1 = rand.Next(0, count);
 				var pii = EList[i1];
 				E.Remove(pii);
@@ -194,25 +199,28 @@ namespace Connectivity.test
 				swD.Start();
 				graph.RemoveEdge(V[pii.Item1], V[pii.Item2]);
 				swD.Stop();
-				return pii;
 			}
 
-			Tuple<Pii, bool> QueryRandom()
+			void QueryRandom()
+			{
+				int a1 = rand.Next(0, nV);
+
+				swQ.Start();
+				var result = (SumAndMax) graph.GetComponentAugmentation(V[a1]);
+				swQ.Stop();
+
+				hash = hash * 31 + result.sum;
+			}
+
+			void QueryRandom1()
 			{
 				int a1 = rand.Next(1, nV);
 				int b1 = rand.Next(0, a1);
-				var pii = new Pii(a1, b1);
 				swQ.Start();
-				bool result = graph.Connected(V[a1], V[b1]);
+				bool result = graph.IsConnected(V[a1], V[b1]);
 				swQ.Stop();
 
 				hash = hash * 31 + (result ? 402653189 : 786433);
-				if (result)
-					nT++;
-				else
-					nF++;
-
-				return new Tuple<Pii, bool>(pii, result);
 			}
 		}
 
@@ -252,28 +260,28 @@ namespace Connectivity.test
 			ConnVertex vertex10 = new ConnVertex(random);
 			AssertTrue(graph.AddEdge(vertex8, vertex10));
 			AssertFalse(graph.RemoveEdge(vertex7, vertex1));
-			AssertTrue(graph.Connected(vertex1, vertex4));
-			AssertTrue(graph.Connected(vertex1, vertex1));
-			AssertTrue(graph.Connected(vertex1, vertex2));
-			AssertTrue(graph.Connected(vertex3, vertex6));
-			AssertTrue(graph.Connected(vertex7, vertex4));
-			AssertTrue(graph.Connected(vertex8, vertex9));
-			AssertTrue(graph.Connected(vertex5, vertex2));
-			AssertTrue(graph.Connected(vertex8, vertex10));
-			AssertTrue(graph.Connected(vertex9, vertex10));
-			AssertFalse(graph.Connected(vertex1, vertex8));
-			AssertFalse(graph.Connected(vertex2, vertex10));
+			AssertTrue(graph.IsConnected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex1, vertex1));
+			AssertTrue(graph.IsConnected(vertex1, vertex2));
+			AssertTrue(graph.IsConnected(vertex3, vertex6));
+			AssertTrue(graph.IsConnected(vertex7, vertex4));
+			AssertTrue(graph.IsConnected(vertex8, vertex9));
+			AssertTrue(graph.IsConnected(vertex5, vertex2));
+			AssertTrue(graph.IsConnected(vertex8, vertex10));
+			AssertTrue(graph.IsConnected(vertex9, vertex10));
+			AssertFalse(graph.IsConnected(vertex1, vertex8));
+			AssertFalse(graph.IsConnected(vertex2, vertex10));
 			AssertTrue(graph.RemoveEdge(vertex4, vertex5));
-			AssertTrue(graph.Connected(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex2, vertex4));
-			AssertTrue(graph.Connected(vertex5, vertex6));
-			AssertTrue(graph.Connected(vertex5, vertex7));
-			AssertTrue(graph.Connected(vertex8, vertex9));
-			AssertTrue(graph.Connected(vertex3, vertex3));
-			AssertFalse(graph.Connected(vertex1, vertex5));
-			AssertFalse(graph.Connected(vertex4, vertex7));
-			AssertFalse(graph.Connected(vertex1, vertex8));
-			AssertFalse(graph.Connected(vertex6, vertex9));
+			AssertTrue(graph.IsConnected(vertex1, vertex3));
+			AssertTrue(graph.IsConnected(vertex2, vertex4));
+			AssertTrue(graph.IsConnected(vertex5, vertex6));
+			AssertTrue(graph.IsConnected(vertex5, vertex7));
+			AssertTrue(graph.IsConnected(vertex8, vertex9));
+			AssertTrue(graph.IsConnected(vertex3, vertex3));
+			AssertFalse(graph.IsConnected(vertex1, vertex5));
+			AssertFalse(graph.IsConnected(vertex4, vertex7));
+			AssertFalse(graph.IsConnected(vertex1, vertex8));
+			AssertFalse(graph.IsConnected(vertex6, vertex9));
 
 			ISet<ConnVertex> expectedAdjVertices = new HashSet<ConnVertex>();
 			expectedAdjVertices.Add(vertex2);
@@ -311,22 +319,22 @@ namespace Connectivity.test
 			{
 				graph.RemoveEdge(vertices[i], vertices[(i - 1) / 2]);
 			}
-			AssertTrue(graph.Connected(vertices[0], vertices[0]));
-			AssertTrue(graph.Connected(vertices[11], vertices[2]));
-			AssertTrue(graph.Connected(vertices[7], vertices[14]));
-			AssertTrue(graph.Connected(vertices[0], vertices[10]));
-			AssertFalse(graph.Connected(vertices[0], vertices[15]));
-			AssertFalse(graph.Connected(vertices[15], vertices[16]));
-			AssertFalse(graph.Connected(vertices[14], vertices[15]));
-			AssertFalse(graph.Connected(vertices[7], vertices[605]));
-			AssertFalse(graph.Connected(vertices[5], vertices[87]));
-			AssertTrue(graph.Connected(vertices[22], vertices[22]));
-			AssertTrue(graph.Connected(vertices[16], vertices[70]));
-			AssertTrue(graph.Connected(vertices[113], vertices[229]));
-			AssertTrue(graph.Connected(vertices[21], vertices[715]));
-			AssertTrue(graph.Connected(vertices[175], vertices[715]));
-			AssertTrue(graph.Connected(vertices[30], vertices[999]));
-			AssertTrue(graph.Connected(vertices[991], vertices[999]));
+			AssertTrue(graph.IsConnected(vertices[0], vertices[0]));
+			AssertTrue(graph.IsConnected(vertices[11], vertices[2]));
+			AssertTrue(graph.IsConnected(vertices[7], vertices[14]));
+			AssertTrue(graph.IsConnected(vertices[0], vertices[10]));
+			AssertFalse(graph.IsConnected(vertices[0], vertices[15]));
+			AssertFalse(graph.IsConnected(vertices[15], vertices[16]));
+			AssertFalse(graph.IsConnected(vertices[14], vertices[15]));
+			AssertFalse(graph.IsConnected(vertices[7], vertices[605]));
+			AssertFalse(graph.IsConnected(vertices[5], vertices[87]));
+			AssertTrue(graph.IsConnected(vertices[22], vertices[22]));
+			AssertTrue(graph.IsConnected(vertices[16], vertices[70]));
+			AssertTrue(graph.IsConnected(vertices[113], vertices[229]));
+			AssertTrue(graph.IsConnected(vertices[21], vertices[715]));
+			AssertTrue(graph.IsConnected(vertices[175], vertices[715]));
+			AssertTrue(graph.IsConnected(vertices[30], vertices[999]));
+			AssertTrue(graph.IsConnected(vertices[991], vertices[999]));
 		}
 
 		/// <summary>
@@ -349,19 +357,19 @@ namespace Connectivity.test
 			AssertTrue(graph.AddEdge(vertex2, vertex4));
 			AssertTrue(graph.AddEdge(vertex3, vertex4));
 			AssertTrue(graph.AddEdge(vertex4, vertex5));
-			AssertTrue(graph.Connected(vertex5, vertex1));
-			AssertTrue(graph.Connected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex5, vertex1));
+			AssertTrue(graph.IsConnected(vertex1, vertex4));
 			AssertTrue(graph.RemoveEdge(vertex4, vertex5));
-			AssertFalse(graph.Connected(vertex4, vertex5));
-			AssertFalse(graph.Connected(vertex5, vertex1));
-			AssertTrue(graph.Connected(vertex1, vertex4));
+			AssertFalse(graph.IsConnected(vertex4, vertex5));
+			AssertFalse(graph.IsConnected(vertex5, vertex1));
+			AssertTrue(graph.IsConnected(vertex1, vertex4));
 			AssertTrue(graph.RemoveEdge(vertex1, vertex2));
 			AssertTrue(graph.RemoveEdge(vertex3, vertex4));
-			AssertTrue(graph.Connected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex1, vertex4));
 			AssertTrue(graph.RemoveEdge(vertex2, vertex3));
-			AssertTrue(graph.Connected(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex2, vertex4));
-			AssertFalse(graph.Connected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex1, vertex3));
+			AssertTrue(graph.IsConnected(vertex2, vertex4));
+			AssertFalse(graph.IsConnected(vertex1, vertex4));
 		}
 
 		/// <summary>
@@ -374,7 +382,7 @@ namespace Connectivity.test
 			ConnGraph graph = new ConnGraph();
 			Random random = new Random(6170);
 			ConnVertex vertex = new ConnVertex(random);
-			AssertTrue(graph.Connected(vertex, vertex));
+			AssertTrue(graph.IsConnected(vertex, vertex));
 
 			graph = new ConnGraph(SumAndMax.augmentation);
 			IList<IList<ConnVertex>> vertices = new List<IList<ConnVertex>>(20);
@@ -397,9 +405,9 @@ namespace Connectivity.test
 			}
 			graph.Optimize();
 
-			AssertTrue(graph.Connected(vertices[0][0], vertices[15][12]));
-			AssertTrue(graph.Connected(vertices[0][0], vertices[18][19]));
-			AssertFalse(graph.Connected(vertices[0][0], vertices[19][19]));
+			AssertTrue(graph.IsConnected(vertices[0][0], vertices[15][12]));
+			AssertTrue(graph.IsConnected(vertices[0][0], vertices[18][19]));
+			AssertFalse(graph.IsConnected(vertices[0][0], vertices[19][19]));
 			AssertFalse(graph.RemoveEdge(vertices[18][19], vertices[19][19]));
 			AssertFalse(graph.RemoveEdge(vertices[0][0], vertices[2][2]));
 
@@ -410,29 +418,29 @@ namespace Connectivity.test
 			AssertTrue(graph.RemoveEdge(vertices[13][8], vertices[14][8]));
 			AssertTrue(graph.RemoveEdge(vertices[12][9], vertices[12][10]));
 			AssertTrue(graph.RemoveEdge(vertices[13][9], vertices[13][10]));
-			AssertTrue(graph.Connected(vertices[2][1], vertices[12][8]));
-			AssertTrue(graph.Connected(vertices[12][8], vertices[13][9]));
+			AssertTrue(graph.IsConnected(vertices[2][1], vertices[12][8]));
+			AssertTrue(graph.IsConnected(vertices[12][8], vertices[13][9]));
 			AssertTrue(graph.RemoveEdge(vertices[13][9], vertices[14][9]));
-			AssertFalse(graph.Connected(vertices[2][1], vertices[12][8]));
-			AssertTrue(graph.Connected(vertices[12][8], vertices[13][9]));
-			AssertFalse(graph.Connected(vertices[11][8], vertices[12][8]));
-			AssertTrue(graph.Connected(vertices[16][18], vertices[6][15]));
+			AssertFalse(graph.IsConnected(vertices[2][1], vertices[12][8]));
+			AssertTrue(graph.IsConnected(vertices[12][8], vertices[13][9]));
+			AssertFalse(graph.IsConnected(vertices[11][8], vertices[12][8]));
+			AssertTrue(graph.IsConnected(vertices[16][18], vertices[6][15]));
 			AssertTrue(graph.RemoveEdge(vertices[12][9], vertices[12][8]));
 			AssertTrue(graph.RemoveEdge(vertices[12][8], vertices[13][8]));
-			AssertFalse(graph.Connected(vertices[2][1], vertices[12][8]));
-			AssertFalse(graph.Connected(vertices[12][8], vertices[13][9]));
-			AssertFalse(graph.Connected(vertices[11][8], vertices[12][8]));
-			AssertTrue(graph.Connected(vertices[13][8], vertices[12][9]));
+			AssertFalse(graph.IsConnected(vertices[2][1], vertices[12][8]));
+			AssertFalse(graph.IsConnected(vertices[12][8], vertices[13][9]));
+			AssertFalse(graph.IsConnected(vertices[11][8], vertices[12][8]));
+			AssertTrue(graph.IsConnected(vertices[13][8], vertices[12][9]));
 
 			AssertTrue(graph.RemoveEdge(vertices[6][15], vertices[5][15]));
 			AssertTrue(graph.RemoveEdge(vertices[6][15], vertices[7][15]));
 			AssertTrue(graph.RemoveEdge(vertices[6][15], vertices[6][14]));
 			AssertTrue(graph.RemoveEdge(vertices[6][15], vertices[6][16]));
 			AssertFalse(graph.RemoveEdge(vertices[6][15], vertices[5][15]));
-			AssertFalse(graph.Connected(vertices[16][18], vertices[6][15]));
-			AssertFalse(graph.Connected(vertices[7][15], vertices[6][15]));
+			AssertFalse(graph.IsConnected(vertices[16][18], vertices[6][15]));
+			AssertFalse(graph.IsConnected(vertices[7][15], vertices[6][15]));
 			graph.AddEdge(vertices[6][15], vertices[7][15]);
-			AssertTrue(graph.Connected(vertices[16][18], vertices[6][15]));
+			AssertTrue(graph.IsConnected(vertices[16][18], vertices[6][15]));
 
 			for (int y = 1; y < 19; y++)
 			{
@@ -445,10 +453,10 @@ namespace Connectivity.test
 
 			AssertTrue(graph.AddEdge(vertices[5][6], vertices[0][7]));
 			AssertTrue(graph.AddEdge(vertices[12][8], vertices[5][6]));
-			AssertTrue(graph.Connected(vertices[5][6], vertices[14][0]));
-			AssertTrue(graph.Connected(vertices[12][8], vertices[0][17]));
-			AssertFalse(graph.Connected(vertices[3][5], vertices[0][9]));
-			AssertFalse(graph.Connected(vertices[14][2], vertices[11][18]));
+			AssertTrue(graph.IsConnected(vertices[5][6], vertices[14][0]));
+			AssertTrue(graph.IsConnected(vertices[12][8], vertices[0][17]));
+			AssertFalse(graph.IsConnected(vertices[3][5], vertices[0][9]));
+			AssertFalse(graph.IsConnected(vertices[14][2], vertices[11][18]));
 
 			AssertNull(graph.GetVertexAugmentation(vertices[13][8]));
 			AssertNull(graph.GetVertexAugmentation(vertices[6][4]));
@@ -507,10 +515,10 @@ namespace Connectivity.test
 			}
 			AssertTrue(graph.AddEdge(hub, clique[0]));
 
-			AssertTrue(graph.Connected(spokes1[5], clique[3]));
-			AssertTrue(graph.Connected(spokes1[3], spokes2[8]));
-			AssertTrue(graph.Connected(spokes1[4], spokes2[4]));
-			AssertTrue(graph.Connected(clique[5], hub));
+			AssertTrue(graph.IsConnected(spokes1[5], clique[3]));
+			AssertTrue(graph.IsConnected(spokes1[3], spokes2[8]));
+			AssertTrue(graph.IsConnected(spokes1[4], spokes2[4]));
+			AssertTrue(graph.IsConnected(clique[5], hub));
 			SumAndMax expectedAugmentation = new SumAndMax(135, 29);
 			AssertEquals(expectedAugmentation, graph.GetComponentAugmentation(spokes2[8]));
 			AssertTrue(graph.ComponentHasAugmentation(spokes2[8]));
@@ -522,26 +530,26 @@ namespace Connectivity.test
 			AssertFalse(graph.VertexHasAugmentation(hub));
 
 			AssertTrue(graph.RemoveEdge(spokes1[5], hub));
-			AssertTrue(graph.Connected(spokes1[5], clique[2]));
-			AssertTrue(graph.Connected(spokes1[5], spokes1[8]));
-			AssertTrue(graph.Connected(spokes1[5], spokes2[5]));
+			AssertTrue(graph.IsConnected(spokes1[5], clique[2]));
+			AssertTrue(graph.IsConnected(spokes1[5], spokes1[8]));
+			AssertTrue(graph.IsConnected(spokes1[5], spokes2[5]));
 			AssertEquals(new SumAndMax(135, 29), graph.GetComponentAugmentation(hub));
 			AssertTrue(graph.RemoveEdge(spokes2[5], hub));
-			AssertFalse(graph.Connected(spokes1[5], clique[2]));
-			AssertFalse(graph.Connected(spokes1[5], spokes1[8]));
-			AssertTrue(graph.Connected(spokes1[5], spokes2[5]));
+			AssertFalse(graph.IsConnected(spokes1[5], clique[2]));
+			AssertFalse(graph.IsConnected(spokes1[5], spokes1[8]));
+			AssertTrue(graph.IsConnected(spokes1[5], spokes2[5]));
 			AssertEquals(new SumAndMax(125, 29), graph.GetComponentAugmentation(hub));
 			AssertTrue(graph.AddEdge(spokes1[5], hub));
-			AssertTrue(graph.Connected(spokes1[5], clique[2]));
-			AssertTrue(graph.Connected(spokes1[5], spokes1[8]));
-			AssertTrue(graph.Connected(spokes1[5], spokes2[5]));
+			AssertTrue(graph.IsConnected(spokes1[5], clique[2]));
+			AssertTrue(graph.IsConnected(spokes1[5], spokes1[8]));
+			AssertTrue(graph.IsConnected(spokes1[5], spokes2[5]));
 			AssertEquals(new SumAndMax(135, 29), graph.GetComponentAugmentation(hub));
 
 			AssertTrue(graph.RemoveEdge(hub, clique[0]));
-			AssertFalse(graph.Connected(spokes1[3], clique[4]));
-			AssertTrue(graph.Connected(spokes2[7], hub));
-			AssertFalse(graph.Connected(hub, clique[0]));
-			AssertTrue(graph.Connected(spokes2[9], spokes1[5]));
+			AssertFalse(graph.IsConnected(spokes1[3], clique[4]));
+			AssertTrue(graph.IsConnected(spokes2[7], hub));
+			AssertFalse(graph.IsConnected(hub, clique[0]));
+			AssertTrue(graph.IsConnected(spokes2[9], spokes1[5]));
 			AssertEquals(new SumAndMax(90, 19), graph.GetComponentAugmentation(hub));
 			AssertEquals(new SumAndMax(90, 19), graph.GetComponentAugmentation(spokes2[4]));
 			AssertEquals(new SumAndMax(45, 29), graph.GetComponentAugmentation(clique[1]));
@@ -575,17 +583,17 @@ namespace Connectivity.test
 					AssertTrue(graph.RemoveEdge(hub, spokes2[i]));
 				}
 			}
-			AssertFalse(graph.Connected(hub, spokes1[8]));
-			AssertFalse(graph.Connected(hub, spokes2[4]));
-			AssertTrue(graph.Connected(hub, clique[5]));
+			AssertFalse(graph.IsConnected(hub, spokes1[8]));
+			AssertFalse(graph.IsConnected(hub, spokes2[4]));
+			AssertTrue(graph.IsConnected(hub, clique[5]));
 
 			graph.Clear();
 			AssertTrue(graph.AddEdge(hub, spokes1[0]));
 			AssertTrue(graph.AddEdge(hub, spokes2[0]));
 			AssertTrue(graph.AddEdge(spokes1[0], spokes2[0]));
-			AssertTrue(graph.Connected(hub, spokes1[0]));
-			AssertFalse(graph.Connected(hub, spokes2[4]));
-			AssertTrue(graph.Connected(clique[5], clique[5]));
+			AssertTrue(graph.IsConnected(hub, spokes1[0]));
+			AssertFalse(graph.IsConnected(hub, spokes2[4]));
+			AssertTrue(graph.IsConnected(clique[5], clique[5]));
 			AssertNull(graph.GetComponentAugmentation(hub));
 			AssertNull(graph.GetVertexAugmentation(spokes2[8]));
 		}
@@ -631,7 +639,7 @@ namespace Connectivity.test
 			IList<ConnVertex> column = vertices[columnIndex + 1];
 			for (int i = 0; i < expectedPermutation.Length; i++)
 			{
-				AssertTrue(graph.Connected(firstColumn[i], column[expectedPermutation[i]]));
+				AssertTrue(graph.IsConnected(firstColumn[i], column[expectedPermutation[i]]));
 			}
 		}
 
@@ -647,7 +655,7 @@ namespace Connectivity.test
 			IList<ConnVertex> column = vertices[columnIndex + 1];
 			for (int i = 0; i < wrongPermutation.Length; i++)
 			{
-				AssertFalse(graph.Connected(firstColumn[i], column[wrongPermutation[i]]));
+				AssertFalse(graph.IsConnected(firstColumn[i], column[wrongPermutation[i]]));
 			}
 		}
 
@@ -931,11 +939,11 @@ namespace Connectivity.test
 			AssertTrue(graph.AddEdge(utah, wyoming));
 			AssertTrue(graph.AddEdge(virginia, westVirginia));
 
-			AssertTrue(graph.Connected(florida, washington));
-			AssertTrue(graph.Connected(rhodeIsland, michigan));
-			AssertTrue(graph.Connected(delaware, texas));
-			AssertFalse(graph.Connected(alaska, newYork));
-			AssertFalse(graph.Connected(hawaii, idaho));
+			AssertTrue(graph.IsConnected(florida, washington));
+			AssertTrue(graph.IsConnected(rhodeIsland, michigan));
+			AssertTrue(graph.IsConnected(delaware, texas));
+			AssertFalse(graph.IsConnected(alaska, newYork));
+			AssertFalse(graph.IsConnected(hawaii, idaho));
 			AssertEquals(new SumAndMax(432, 1912), graph.GetComponentAugmentation(newJersey));
 			AssertEquals(new SumAndMax(2, 1959), graph.GetComponentAugmentation(hawaii));
 
@@ -949,16 +957,16 @@ namespace Connectivity.test
 			AssertTrue(graph.RemoveEdge(oklahoma, missouri));
 			AssertTrue(graph.RemoveEdge(oklahoma, arkansas));
 			AssertTrue(graph.RemoveEdge(texas, arkansas));
-			AssertTrue(graph.Connected(california, massachusetts));
-			AssertTrue(graph.Connected(montana, virginia));
-			AssertTrue(graph.Connected(idaho, southDakota));
-			AssertTrue(graph.Connected(maine, tennessee));
+			AssertTrue(graph.IsConnected(california, massachusetts));
+			AssertTrue(graph.IsConnected(montana, virginia));
+			AssertTrue(graph.IsConnected(idaho, southDakota));
+			AssertTrue(graph.IsConnected(maine, tennessee));
 			AssertEquals(new SumAndMax(432, 1912), graph.GetComponentAugmentation(vermont));
 			AssertTrue(graph.RemoveEdge(texas, louisiana));
-			AssertFalse(graph.Connected(california, massachusetts));
-			AssertFalse(graph.Connected(montana, virginia));
-			AssertTrue(graph.Connected(idaho, southDakota));
-			AssertTrue(graph.Connected(maine, tennessee));
+			AssertFalse(graph.IsConnected(california, massachusetts));
+			AssertFalse(graph.IsConnected(montana, virginia));
+			AssertTrue(graph.IsConnected(idaho, southDakota));
+			AssertTrue(graph.IsConnected(maine, tennessee));
 			AssertEquals(new SumAndMax(149, 1912), graph.GetComponentAugmentation(wyoming));
 			AssertEquals(new SumAndMax(283, 1863), graph.GetComponentAugmentation(vermont));
 
@@ -967,8 +975,8 @@ namespace Connectivity.test
 			AssertTrue(graph.RemoveEdge(california, nevada));
 			AssertTrue(graph.RemoveEdge(california, arizona));
 			AssertEquals(new SumAndMax(53, 1850), graph.RemoveVertexAugmentation(california));
-			AssertFalse(graph.Connected(california, utah));
-			AssertFalse(graph.Connected(california, oregon));
+			AssertFalse(graph.IsConnected(california, utah));
+			AssertFalse(graph.IsConnected(california, oregon));
 			AssertNull(graph.GetComponentAugmentation(california));
 			AssertEquals(new SumAndMax(96, 1912), graph.GetComponentAugmentation(washington));
 			AssertEquals(new SumAndMax(283, 1863), graph.GetComponentAugmentation(vermont));
@@ -1118,10 +1126,10 @@ namespace Connectivity.test
 			AssertEquals(new SumAndMax(8, 1848), graph.RemoveVertexAugmentation(wisconsin));
 			AssertEquals(new SumAndMax(1, 1890), graph.RemoveVertexAugmentation(wyoming));
 
-			AssertFalse(graph.Connected(georgia, newMexico));
-			AssertFalse(graph.Connected(wisconsin, michigan));
-			AssertFalse(graph.Connected(ohio, kentucky));
-			AssertFalse(graph.Connected(alaska, connecticut));
+			AssertFalse(graph.IsConnected(georgia, newMexico));
+			AssertFalse(graph.IsConnected(wisconsin, michigan));
+			AssertFalse(graph.IsConnected(ohio, kentucky));
+			AssertFalse(graph.IsConnected(alaska, connecticut));
 			AssertNull(graph.GetComponentAugmentation(southDakota));
 			AssertNull(graph.GetComponentAugmentation(arkansas));
 		}
@@ -1188,27 +1196,27 @@ namespace Connectivity.test
 			AssertTrue(graph.AddEdge(vertex19, vertex20));
 			graph.Optimize();
 
-			AssertTrue(graph.Connected(vertex1, vertex17));
-			AssertTrue(graph.Connected(vertex7, vertex15));
+			AssertTrue(graph.IsConnected(vertex1, vertex17));
+			AssertTrue(graph.IsConnected(vertex7, vertex15));
 
 			AssertTrue(graph.RemoveEdge(vertex5, vertex14));
 			AssertTrue(graph.RemoveEdge(vertex6, vertex15));
 			AssertTrue(graph.RemoveEdge(vertex7, vertex16));
 			AssertTrue(graph.RemoveEdge(vertex12, vertex13));
 			AssertTrue(graph.RemoveEdge(vertex16, vertex17));
-			AssertTrue(graph.Connected(vertex1, vertex14));
-			AssertTrue(graph.Connected(vertex4, vertex20));
-			AssertTrue(graph.Connected(vertex14, vertex16));
+			AssertTrue(graph.IsConnected(vertex1, vertex14));
+			AssertTrue(graph.IsConnected(vertex4, vertex20));
+			AssertTrue(graph.IsConnected(vertex14, vertex16));
 
 			AssertTrue(graph.RemoveEdge(vertex18, vertex19));
-			AssertFalse(graph.Connected(vertex1, vertex14));
-			AssertFalse(graph.Connected(vertex4, vertex20));
-			AssertTrue(graph.Connected(vertex14, vertex16));
+			AssertFalse(graph.IsConnected(vertex1, vertex14));
+			AssertFalse(graph.IsConnected(vertex4, vertex20));
+			AssertTrue(graph.IsConnected(vertex14, vertex16));
 
 			graph.Clear();
 			graph.Optimize();
-			AssertTrue(graph.Connected(vertex7, vertex7));
-			AssertFalse(graph.Connected(vertex1, vertex2));
+			AssertTrue(graph.IsConnected(vertex7, vertex7));
+			AssertFalse(graph.IsConnected(vertex1, vertex2));
 		}
 
 		/// <summary>
@@ -1229,19 +1237,19 @@ namespace Connectivity.test
 			AssertTrue(graph.AddEdge(vertex2, vertex3));
 			AssertTrue(graph.AddEdge(vertex1, vertex3));
 			AssertTrue(graph.AddEdge(vertex4, vertex5));
-			AssertTrue(graph.Connected(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex4, vertex5));
-			AssertFalse(graph.Connected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex1, vertex3));
+			AssertTrue(graph.IsConnected(vertex4, vertex5));
+			AssertFalse(graph.IsConnected(vertex1, vertex4));
 
 			graph.Optimize();
 			AssertTrue(graph.RemoveEdge(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex4, vertex5));
-			AssertFalse(graph.Connected(vertex1, vertex4));
+			AssertTrue(graph.IsConnected(vertex1, vertex3));
+			AssertTrue(graph.IsConnected(vertex4, vertex5));
+			AssertFalse(graph.IsConnected(vertex1, vertex4));
 			AssertTrue(graph.RemoveEdge(vertex1, vertex2));
-			AssertFalse(graph.Connected(vertex1, vertex3));
-			AssertTrue(graph.Connected(vertex4, vertex5));
-			AssertFalse(graph.Connected(vertex1, vertex4));
+			AssertFalse(graph.IsConnected(vertex1, vertex3));
+			AssertTrue(graph.IsConnected(vertex4, vertex5));
+			AssertFalse(graph.IsConnected(vertex1, vertex4));
 
 			AssertEqualsUnordered(new [] {vertex3}, new HashSet<ConnVertex>(graph.AdjacentVertices(vertex2)));
 			AssertTrue(graph.AdjacentVertices(vertex1).Count == 0);

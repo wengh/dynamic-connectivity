@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace Connectivity.RedBlack
 {
-
 	/// <summary>
 	/// A node in a red-black tree ( https://en.wikipedia.org/wiki/Red%E2%80%93black_tree ). Compared to a class like Java's
 	/// TreeMap, RedBlackNode is a low-level data structure. The internals of a node are exposed as public fields, allowing
@@ -30,9 +29,7 @@ namespace Connectivity.RedBlack
 	/// - Both children of each red node are black.
 	/// - Every path from the root to a leaf contains the same number of black nodes.
 	/// </summary>
-	/// @param <N> The type of node in the tree. For example, we might have
-	///     "class FooNode<T> extends RedBlackNode<FooNode<T>>".
-	/// @author Bill Jacobs </param>
+	/// <author>Bill Jacobs</author>
 	public abstract class RedBlackNode<TN> : IComparable<TN> where TN : RedBlackNode<TN>
 	{
 		/// <summary>

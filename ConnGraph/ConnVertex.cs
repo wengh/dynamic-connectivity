@@ -25,8 +25,10 @@ namespace Connectivity
 
 		/// <summary>
 		/// Constructs a new ConnVertex. </summary>
-		/// <param name="random"> The random number generator to use to produce a random hash code. ConnGraph relies on random hash
-		///     codes for its performance guarantees. </param>
+		/// <param name="random">
+		/// The random number generator to use to produce a random hash code. ConnGraph relies on random hash
+		/// codes for its performance guarantees.
+		/// </param>
 		public ConnVertex(Random random)
 		{
 			_hash = random.Next();

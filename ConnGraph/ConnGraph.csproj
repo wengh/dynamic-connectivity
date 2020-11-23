@@ -67,6 +67,7 @@
         <Compile Include="RedBlack\RedBlackNode.cs" />
         <Compile Include="RedBlack\Reference.cs" />
         <Compile Include="Test\ConnGraphTest.cs" />
+        <Compile Include="Test\PerformanceMeasurement.cs" />
         <Compile Include="Test\SumAndMax.cs" />
         <Compile Include="VertexInfo.cs" />
     </ItemGroup>

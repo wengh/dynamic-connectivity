@@ -1086,7 +1086,7 @@ namespace Connectivity
 		/// Returns whether the specified vertices are connected - whether there is a path between them. Returns true if
 		/// vertex1 == vertex2. This method takes O(log N) time with high probability.
 		/// </summary>
-		public virtual bool Connected(ConnVertex vertex1, ConnVertex vertex2)
+		public virtual bool IsConnected(ConnVertex vertex1, ConnVertex vertex2)
 		{
 			if (vertex1 == vertex2)
 			{
@@ -1130,7 +1130,7 @@ namespace Connectivity
 			AssertIsAugmented();
 			EulerTourVertex vertex = EnsureInfo(connVertex).vertex;
 			object oldAugmentation = vertex.augmentation;
-			if (!vertex.hasAugmentation || (vertexAugmentation != null ?!vertexAugmentation.Equals(oldAugmentation) : oldAugmentation != null))
+			if (!vertex.hasAugmentation || (!vertexAugmentation?.Equals(oldAugmentation) ?? oldAugmentation != null))
 			{
 				vertex.augmentation = vertexAugmentation;
 				vertex.hasAugmentation = true;
