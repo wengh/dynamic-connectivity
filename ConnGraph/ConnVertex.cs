@@ -10,17 +10,17 @@ namespace Connectivity
 	{
 		/// <summary>
 		/// The thread-local random number generator we use by default to set the "hash" field. </summary>
-		private static readonly ThreadLocal<Random> random = new ThreadLocal<Random>(() => new Random());
+		private static readonly ThreadLocal<Random> _random = new ThreadLocal<Random>(() => new Random());
 
 		/// <summary>
 		/// A randomly generated integer to use as the return value of hashCode(). ConnGraph relies on random hash codes for
 		/// its performance guarantees.
 		/// </summary>
-		private readonly int hash;
+		private readonly int _hash;
 
 		public ConnVertex()
 		{
-			hash = random.Value.Next(int.MinValue, int.MaxValue);
+			_hash = _random.Value.Next(int.MinValue, int.MaxValue);
 		}
 
 		/// <summary>
@@ -29,12 +29,12 @@ namespace Connectivity
 		///     codes for its performance guarantees. </param>
 		public ConnVertex(Random random)
 		{
-			hash = random.Next();
+			_hash = random.Next();
 		}
 
 		public override int GetHashCode()
 		{
-			return hash;
+			return _hash;
 		}
 	}
 

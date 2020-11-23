@@ -23,7 +23,7 @@
 	/// 
 	/// See the comments for ConnGraph.
 	/// </summary>
-	public interface Augmentation
+	public interface IAugmentation
 	{
 		/// <summary>
 		/// Returns the result of combining the specified values into one. Each argument is either the augmentation
@@ -36,7 +36,7 @@
 		/// prior call to ConnGraph.setVertexAugmentation(vertex, null), or that the "combine" method previously returned
 		/// null.
 		/// </summary>
-		object combine(object value1, object value2);
+		object Combine(object value1, object value2);
 	}
 
 }

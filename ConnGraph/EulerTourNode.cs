@@ -1,4 +1,4 @@
-﻿using com.github.btrekkie.red_black_node;
+﻿using Connectivity.RedBlack;
 
 namespace Connectivity
 {
@@ -10,7 +10,7 @@ namespace Connectivity
 	{
 		/// <summary>
 		/// The dummy leaf node. </summary>
-		public static readonly EulerTourNode LEAF = new EulerTourNode(null, null);
+		public static readonly EulerTourNode leaf = new EulerTourNode(null, null);
 
 		/// <summary>
 		/// The vertex this node visits. </summary>
@@ -36,7 +36,7 @@ namespace Connectivity
 		/// The combining function for combining user-provided augmentations. augmentationFunc is null if this node is not in
 		/// the highest level.
 		/// </summary>
-		public readonly Augmentation augmentationFunc;
+		public readonly IAugmentation augmentationFunc;
 
 		/// <summary>
 		/// The combined augmentation for the subtree rooted at this node. This is the result of combining the augmentation
@@ -52,7 +52,7 @@ namespace Connectivity
 		/// </summary>
 		public bool hasAugmentation;
 
-		public EulerTourNode(EulerTourVertex vertex, Augmentation augmentationFunc)
+		public EulerTourNode(EulerTourVertex vertex, IAugmentation augmentationFunc)
 		{
 			this.vertex = vertex;
 			this.augmentationFunc = augmentationFunc;
@@ -60,7 +60,7 @@ namespace Connectivity
 
 		/// <summary>
 		/// Like augment(), but only updates the augmentation fields hasGraphEdge and hasForestEdge. </summary>
-		public virtual bool augmentFlags()
+		public virtual bool AugmentFlags()
 		{
 			bool newHasGraphEdge = left.hasGraphEdge || right.hasGraphEdge || (vertex.arbitraryVisit == this && vertex.graphListHead != null);
 			bool newHasForestEdge = left.hasForestEdge || right.hasForestEdge || (vertex.arbitraryVisit == this && vertex.forestListHead != null);
@@ -76,10 +76,10 @@ namespace Connectivity
 			}
 		}
 
-		public override bool augment()
+		public override bool Augment()
 		{
 			int newSize = left.size + right.size + 1;
-			bool augmentedFlags = augmentFlags();
+			bool augmentedFlags = AugmentFlags();
 
 			object newAugmentation = null;
 			bool newHasAugmentation = false;
@@ -94,7 +94,7 @@ namespace Connectivity
 				{
 					if (newHasAugmentation)
 					{
-						newAugmentation = augmentationFunc.combine(newAugmentation, vertex.augmentation);
+						newAugmentation = augmentationFunc.Combine(newAugmentation, vertex.augmentation);
 					}
 					else
 					{
@@ -106,7 +106,7 @@ namespace Connectivity
 				{
 					if (newHasAugmentation)
 					{
-						newAugmentation = augmentationFunc.combine(newAugmentation, right.augmentation);
+						newAugmentation = augmentationFunc.Combine(newAugmentation, right.augmentation);
 					}
 					else
 					{

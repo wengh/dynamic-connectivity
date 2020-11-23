@@ -99,7 +99,7 @@ namespace Connectivity
 		/// to rebuild() or clear() and ceiling of log base 2 of the current number of vertices, at or above which we call
 		/// rebuild(). (There is special handling for 0 vertices.)
 		/// </summary>
-		private const int REBUILD_CHANGE = 2;
+		private const int RebuildChange = 2;
 
 		/// <summary>
 		/// The maximum number of vertices we can store in a ConnGraph. This is limited by the fact that EulerTourNode.size
@@ -112,11 +112,11 @@ namespace Connectivity
 		/// only hash the entries to at most 2^32 buckets. In order to support a significantly greater limit on the number of
 		/// vertices, we would need to use a more elaborate mapping approach.
 		/// </summary>
-		private static readonly int MAX_VERTEX_COUNT = 1 << 30;
+		private static readonly int _maxVertexCount = 1 << 30;
 
 		/// <summary>
 		/// The augmentation function for the graph, if any. </summary>
-		private readonly Augmentation augmentation;
+		private readonly IAugmentation _augmentation;
 
 		/// <summary>
 		/// A map from each vertex in this graph to information about the vertex in this graph. If a vertex has no adjacent
@@ -124,40 +124,40 @@ namespace Connectivity
 		/// expected time and O(log N / log log N) time with high probability, because vertexInfo is a HashMap, and
 		/// ConnVertex.hashCode() returns a random integer.
 		/// </summary>
-		private IDictionary<ConnVertex, VertexInfo> vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+		private IDictionary<ConnVertex, VertexInfo> _vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
 
 		/// <summary>
 		/// Ceiling of log base 2 of the maximum number of vertices in this graph since the last rebuild. This is 0 if that
 		/// number is 0.
 		/// </summary>
-		private int maxLogVertexCountSinceRebuild;
+		private int _maxLogVertexCountSinceRebuild;
 
 		/// <summary>
 		/// The maximum number of entries in vertexInfo since the last time we copied that field to a new HashMap. We do this
 		/// when the number of vertices drops sufficiently, in order to limit space usage. (The capacity of a HashMap is not
 		/// automatically reduced as the number of entries decreases, so we have to limit space usage manually.)
 		/// </summary>
-		private int maxVertexInfoSize;
+		private int _maxVertexInfoSize;
 
 		/// <summary>
 		/// Constructs a new ConnGraph with no augmentation. </summary>
 		public ConnGraph()
 		{
-			augmentation = null;
+			_augmentation = null;
 		}
 
 		/// <summary>
 		/// Constructs an augmented ConnGraph, using the specified function to combine augmentation values. </summary>
-		public ConnGraph(Augmentation augmentation)
+		public ConnGraph(IAugmentation augmentation)
 		{
-			this.augmentation = augmentation;
+			_augmentation = augmentation;
 		}
 
 		/// <summary>
 		/// Equivalent implementation is contractual. </summary>
-		private void assertIsAugmented()
+		private void AssertIsAugmented()
 		{
-			if (augmentation == null)
+			if (_augmentation == null)
 			{
 				throw new Exception("You may only call augmentation-related methods on ConnGraph if the graph is augmented, i.e. if an " + "Augmentation was passed to the constructor");
 			}
@@ -168,32 +168,32 @@ namespace Connectivity
 		/// this graph (i.e. it does not have an entry in vertexInfo), this method adds it to the graph, and creates a
 		/// VertexInfo object for it.
 		/// </summary>
-		private VertexInfo ensureInfo(ConnVertex vertex)
+		private VertexInfo EnsureInfo(ConnVertex vertex)
 		{
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
 				return info;
 			}
 
-			if (vertexInfo.Count == MAX_VERTEX_COUNT)
+			if (_vertexInfo.Count == _maxVertexCount)
 			{
 				throw new Exception("Sorry, ConnGraph has too many vertices to perform this operation. ConnGraph does not support " + "storing more than ~2^30 vertices at a time.");
 			}
 
 			EulerTourVertex eulerTourVertex = new EulerTourVertex();
-			EulerTourNode node = new EulerTourNode(eulerTourVertex, augmentation);
+			EulerTourNode node = new EulerTourNode(eulerTourVertex, _augmentation);
 			eulerTourVertex.arbitraryVisit = node;
-			node.left = EulerTourNode.LEAF;
-			node.right = EulerTourNode.LEAF;
-			node.augment();
+			node.left = EulerTourNode.leaf;
+			node.right = EulerTourNode.leaf;
+			node.Augment();
 
 			info = new VertexInfo(eulerTourVertex);
-			vertexInfo[vertex] = info;
-			if (vertexInfo.Count > 1 << maxLogVertexCountSinceRebuild)
+			_vertexInfo[vertex] = info;
+			if (_vertexInfo.Count > 1 << _maxLogVertexCountSinceRebuild)
 			{
-				maxLogVertexCountSinceRebuild++;
+				_maxLogVertexCountSinceRebuild++;
 			}
-			maxVertexInfoSize = Math.Max(maxVertexInfoSize, vertexInfo.Count);
+			_maxVertexInfoSize = Math.Max(_maxVertexInfoSize, _vertexInfo.Count);
 			return info;
 		}
 
@@ -202,20 +202,20 @@ namespace Connectivity
 		/// adjacent edges and does not have any augmentation information. This method assumes that the vertex is currently
 		/// in the graph.
 		/// </summary>
-		private void remove(ConnVertex vertex)
+		private void Remove(ConnVertex vertex)
 		{
-			vertexInfo.Remove(vertex);
-			if (4 * vertexInfo.Count <= maxVertexInfoSize && maxVertexInfoSize > 12)
+			_vertexInfo.Remove(vertex);
+			if (4 * _vertexInfo.Count <= _maxVertexInfoSize && _maxVertexInfoSize > 12)
 			{
 				// The capacity of a HashMap is not automatically reduced as the number of entries decreases. To avoid
 				// violating our O(V log V + E) space guarantee, we copy vertexInfo to a new HashMap, which will have a
 				// suitable capacity.
-				vertexInfo = new Dictionary<ConnVertex, VertexInfo>(vertexInfo);
-				maxVertexInfoSize = vertexInfo.Count;
+				_vertexInfo = new Dictionary<ConnVertex, VertexInfo>(_vertexInfo);
+				_maxVertexInfoSize = _vertexInfo.Count;
 			}
-			if (vertexInfo.Count << REBUILD_CHANGE <= 1 << maxLogVertexCountSinceRebuild)
+			if (_vertexInfo.Count << RebuildChange <= 1 << _maxLogVertexCountSinceRebuild)
 			{
-				rebuild();
+				Rebuild();
 			}
 		}
 
@@ -229,7 +229,7 @@ namespace Connectivity
 		/// <param name="vertex"> The higher-level vertex. </param>
 		/// <param name="lowerVertex"> The lower-level vertex. </param>
 		/// <returns> The head of the combined linked list. </returns>
-		private ConnEdge collapseEdgeList(ConnEdge head, ConnEdge lowerHead, EulerTourVertex vertex, EulerTourVertex lowerVertex)
+		private ConnEdge CollapseEdgeList(ConnEdge head, ConnEdge lowerHead, EulerTourVertex vertex, EulerTourVertex lowerVertex)
 		{
 			if (lowerHead == null)
 			{
@@ -281,11 +281,11 @@ namespace Connectivity
 		/// This method is useful for when an EulerTourVertex's lists (graphListHead or forestListHead) or arbitrary visit
 		/// change, as these affect the hasGraphEdge and hasForestEdge augmentations.
 		/// </summary>
-		private void augmentAncestorFlags(EulerTourNode node)
+		private void AugmentAncestorFlags(EulerTourNode node)
 		{
 			for (EulerTourNode parent = node; parent != null; parent = parent.parent)
 			{
-				if (!parent.augmentFlags())
+				if (!parent.AugmentFlags())
 				{
 					break;
 				}
@@ -298,19 +298,19 @@ namespace Connectivity
 		/// O(V + E) time, assuming a constant difference between maxLogVertexCountSinceRebuild and the result of the
 		/// logarithm.
 		/// </summary>
-		private void rebuild()
+		private void Rebuild()
 		{
 			// Rebuild the graph by collapsing the top deleteCount + 1 levels into the top level
 
-			if (vertexInfo.Count == 0)
+			if (_vertexInfo.Count == 0)
 			{
-				maxLogVertexCountSinceRebuild = 0;
+				_maxLogVertexCountSinceRebuild = 0;
 				return;
 			}
 			int deleteCount = 0;
-			while (2 * vertexInfo.Count <= 1 << maxLogVertexCountSinceRebuild)
+			while (2 * _vertexInfo.Count <= 1 << _maxLogVertexCountSinceRebuild)
 			{
-				maxLogVertexCountSinceRebuild--;
+				_maxLogVertexCountSinceRebuild--;
 				deleteCount++;
 			}
 			if (deleteCount == 0)
@@ -318,7 +318,7 @@ namespace Connectivity
 				return;
 			}
 
-			foreach (VertexInfo info in vertexInfo.Values)
+			foreach (VertexInfo info in _vertexInfo.Values)
 			{
 				EulerTourVertex vertex = info.vertex;
 				EulerTourVertex lowerVertex = vertex;
@@ -330,7 +330,7 @@ namespace Connectivity
 						break;
 					}
 
-					vertex.graphListHead = collapseEdgeList(vertex.graphListHead, lowerVertex.graphListHead, vertex, lowerVertex);
+					vertex.graphListHead = CollapseEdgeList(vertex.graphListHead, lowerVertex.graphListHead, vertex, lowerVertex);
 					if (lowerVertex.forestListHead != null)
 					{
 						// Change the eulerTourEdge links
@@ -354,7 +354,7 @@ namespace Connectivity
 							}
 						}
 
-						vertex.forestListHead = collapseEdgeList(vertex.forestListHead, lowerVertex.forestListHead, vertex, lowerVertex);
+						vertex.forestListHead = CollapseEdgeList(vertex.forestListHead, lowerVertex.forestListHead, vertex, lowerVertex);
 					}
 				}
 
@@ -367,7 +367,7 @@ namespace Connectivity
 				{
 					lowerVertex.higherVertex = vertex;
 				}
-				augmentAncestorFlags(vertex.arbitraryVisit);
+				AugmentAncestorFlags(vertex.arbitraryVisit);
 			}
 		}
 
@@ -375,7 +375,7 @@ namespace Connectivity
 		/// Adds the specified edge to the graph adjacency list of edge.vertex1, as in EulerTourVertex.graphListHead.
 		/// Assumes it is not currently in any lists, except possibly the graph adjacency list of edge.vertex2.
 		/// </summary>
-		private void addToGraphLinkedList1(ConnEdge edge)
+		private void AddToGraphLinkedList1(ConnEdge edge)
 		{
 			edge.prev1 = null;
 			edge.next1 = edge.vertex1.graphListHead;
@@ -397,7 +397,7 @@ namespace Connectivity
 		/// Adds the specified edge to the graph adjacency list of edge.vertex2, as in EulerTourVertex.graphListHead.
 		/// Assumes it is not currently in any lists, except possibly the graph adjacency list of edge.vertex1.
 		/// </summary>
-		private void addToGraphLinkedList2(ConnEdge edge)
+		private void AddToGraphLinkedList2(ConnEdge edge)
 		{
 			edge.prev2 = null;
 			edge.next2 = edge.vertex2.graphListHead;
@@ -419,17 +419,17 @@ namespace Connectivity
 		/// Adds the specified edge to the graph adjacency lists of edge.vertex1 and edge.vertex2, as in
 		/// EulerTourVertex.graphListHead. Assumes it is not currently in any lists.
 		/// </summary>
-		private void addToGraphLinkedLists(ConnEdge edge)
+		private void AddToGraphLinkedLists(ConnEdge edge)
 		{
-			addToGraphLinkedList1(edge);
-			addToGraphLinkedList2(edge);
+			AddToGraphLinkedList1(edge);
+			AddToGraphLinkedList2(edge);
 		}
 
 		/// <summary>
 		/// Adds the specified edge to the forest adjacency lists of edge.vertex1 and edge.vertex2, as in
 		/// EulerTourVertex.forestListHead. Assumes it is not currently in any lists.
 		/// </summary>
-		private void addToForestLinkedLists(ConnEdge edge)
+		private void AddToForestLinkedLists(ConnEdge edge)
 		{
 			edge.prev1 = null;
 			edge.next1 = edge.vertex1.forestListHead;
@@ -466,7 +466,7 @@ namespace Connectivity
 		/// Removes the specified edge from an adjacency list of edge.vertex1, as in graphListHead and forestListHead.
 		/// Assumes it is initially in exactly one of the lists for edge.vertex1.
 		/// </summary>
-		private void removeFromLinkedList1(ConnEdge edge)
+		private void RemoveFromLinkedList1(ConnEdge edge)
 		{
 			if (edge.prev1 != null)
 			{
@@ -504,7 +504,7 @@ namespace Connectivity
 		/// Removes the specified edge from an adjacency list of edge.vertex2, as in graphListHead and forestListHead.
 		/// Assumes it is initially in exactly one of the lists for edge.vertex2.
 		/// </summary>
-		private void removeFromLinkedList2(ConnEdge edge)
+		private void RemoveFromLinkedList2(ConnEdge edge)
 		{
 			if (edge.prev2 != null)
 			{
@@ -543,57 +543,57 @@ namespace Connectivity
 		/// forestListHead. Assumes it is initially in exactly one of the lists for edge.vertex1 and exactly one of the lists
 		/// for edge.vertex2.
 		/// </summary>
-		private void removeFromLinkedLists(ConnEdge edge)
+		private void RemoveFromLinkedLists(ConnEdge edge)
 		{
-			removeFromLinkedList1(edge);
-			removeFromLinkedList2(edge);
+			RemoveFromLinkedList1(edge);
+			RemoveFromLinkedList2(edge);
 		}
 
 		/// <summary>
 		/// Add an edge between the specified vertices to the Euler tour forest F_i. Assumes that the edge's endpoints are
 		/// initially in separate trees. Returns the created edge.
 		/// </summary>
-		private EulerTourEdge addForestEdge(EulerTourVertex vertex1, EulerTourVertex vertex2)
+		private EulerTourEdge AddForestEdge(EulerTourVertex vertex1, EulerTourVertex vertex2)
 		{
 			// We need to be careful about where we split and where we add and remove nodes, so as to avoid breaking any
 			// EulerTourEdge.visit* fields
-			EulerTourNode root = vertex2.arbitraryVisit.root();
-			EulerTourNode max = root.max();
+			EulerTourNode root = vertex2.arbitraryVisit.Root();
+			EulerTourNode max = root.Max();
 			if (max.vertex != vertex2)
 			{
 				// Reroot
-				EulerTourNode min = root.min();
+				EulerTourNode min = root.Min();
 				if (max.vertex.arbitraryVisit == max)
 				{
 					max.vertex.arbitraryVisit = min;
-					augmentAncestorFlags(min);
-					augmentAncestorFlags(max);
+					AugmentAncestorFlags(min);
+					AugmentAncestorFlags(max);
 				}
-				root = max.remove();
-				EulerTourNode[] splitRoots = root.split(vertex2.arbitraryVisit);
-				root = splitRoots[1].concatenate(splitRoots[0]);
+				root = max.Remove();
+				EulerTourNode[] splitRoots = root.Split(vertex2.arbitraryVisit);
+				root = splitRoots[1].Concatenate(splitRoots[0]);
 				EulerTourNode newNode = new EulerTourNode(vertex2, root.augmentationFunc);
-				newNode.left = EulerTourNode.LEAF;
-				newNode.right = EulerTourNode.LEAF;
+				newNode.left = EulerTourNode.leaf;
+				newNode.right = EulerTourNode.leaf;
 				newNode.isRed = true;
-				EulerTourNode parent = root.max();
+				EulerTourNode parent = root.Max();
 				parent.right = newNode;
 				newNode.parent = parent;
-				root = newNode.fixInsertion();
+				root = newNode.FixInsertion();
 				max = newNode;
 			}
 
-			EulerTourNode[] splitRoots1 = vertex1.arbitraryVisit.root().split(vertex1.arbitraryVisit);
+			EulerTourNode[] splitRoots1 = vertex1.arbitraryVisit.Root().Split(vertex1.arbitraryVisit);
 			EulerTourNode before = splitRoots1[0];
 			EulerTourNode after = splitRoots1[1];
 			EulerTourNode newNode1 = new EulerTourNode(vertex1, root.augmentationFunc);
-			before.concatenate(root, newNode1).concatenate(after);
+			before.Concatenate(root, newNode1).Concatenate(after);
 			return new EulerTourEdge(newNode1, max);
 		}
 
 		/// <summary>
 		/// Removes the specified edge from the Euler tour forest F_i. </summary>
-		private void removeForestEdge(EulerTourEdge edge)
+		private void RemoveForestEdge(EulerTourEdge edge)
 		{
 			EulerTourNode firstNode;
 			EulerTourNode secondNode;
@@ -610,18 +610,18 @@ namespace Connectivity
 
 			if (firstNode.vertex.arbitraryVisit == firstNode)
 			{
-				EulerTourNode successor = secondNode.successor();
+				EulerTourNode successor = secondNode.Successor();
 				firstNode.vertex.arbitraryVisit = successor;
-				augmentAncestorFlags(firstNode);
-				augmentAncestorFlags(successor);
+				AugmentAncestorFlags(firstNode);
+				AugmentAncestorFlags(successor);
 			}
 
-			EulerTourNode root = firstNode.root();
-			EulerTourNode[] firstSplitRoots = root.split(firstNode);
+			EulerTourNode root = firstNode.Root();
+			EulerTourNode[] firstSplitRoots = root.Split(firstNode);
 			EulerTourNode before = firstSplitRoots[0];
-			EulerTourNode[] secondSplitRoots = firstSplitRoots[1].split(secondNode.successor());
-			before.concatenate(secondSplitRoots[1]);
-			firstNode.removeWithoutGettingRoot();
+			EulerTourNode[] secondSplitRoots = firstSplitRoots[1].Split(secondNode.Successor());
+			before.Concatenate(secondSplitRoots[1]);
+			firstNode.RemoveWithoutGettingRoot();
 		}
 
 		/// <summary>
@@ -630,7 +630,7 @@ namespace Connectivity
 		/// <param name="edge"> The edge. </param>
 		/// <param name="srcInfo"> The source vertex's info. </param>
 		/// <param name="destVertex"> The destination vertex, i.e. the edge's key in srcInfo.edges. </param>
-		private void addToEdgeMap(ConnEdge edge, VertexInfo srcInfo, ConnVertex destVertex)
+		private void AddToEdgeMap(ConnEdge edge, VertexInfo srcInfo, ConnVertex destVertex)
 		{
 			srcInfo.edges[destVertex] = edge;
 			if (srcInfo.edges.Count > srcInfo.maxEdgeCountSinceRebuild)
@@ -643,41 +643,41 @@ namespace Connectivity
 		/// Adds an edge between the specified vertices, if such an edge is not already present. Taken together with
 		/// removeEdge, this method takes O(log^2 N) amortized time with high probability. </summary>
 		/// <returns> Whether there was no edge between the vertices. </returns>
-		public virtual bool addEdge(ConnVertex connVertex1, ConnVertex connVertex2)
+		public virtual bool AddEdge(ConnVertex connVertex1, ConnVertex connVertex2)
 		{
 			if (connVertex1 == connVertex2)
 			{
-				throw new System.ArgumentException("Self-loops are not allowed");
+				throw new ArgumentException("Self-loops are not allowed");
 			}
-			if (vertexInfo.Count >= MAX_VERTEX_COUNT - 1)
+			if (_vertexInfo.Count >= _maxVertexCount - 1)
 			{
 				throw new Exception("Sorry, ConnGraph has too many vertices to perform this operation. ConnGraph does not support " + "storing more than ~2^30 vertices at a time.");
 			}
-			VertexInfo info1 = ensureInfo(connVertex1);
+			VertexInfo info1 = EnsureInfo(connVertex1);
 			if (info1.edges.ContainsKey(connVertex2))
 			{
 				return false;
 			}
-			VertexInfo info2 = ensureInfo(connVertex2);
+			VertexInfo info2 = EnsureInfo(connVertex2);
 
 			EulerTourVertex vertex1 = info1.vertex;
 			EulerTourVertex vertex2 = info2.vertex;
 			ConnEdge edge = new ConnEdge(vertex1, vertex2);
 
-			if (vertex1.arbitraryVisit.root() == vertex2.arbitraryVisit.root())
+			if (vertex1.arbitraryVisit.Root() == vertex2.arbitraryVisit.Root())
 			{
-				addToGraphLinkedLists(edge);
+				AddToGraphLinkedLists(edge);
 			}
 			else
 			{
-				addToForestLinkedLists(edge);
-				edge.eulerTourEdge = addForestEdge(vertex1, vertex2);
+				AddToForestLinkedLists(edge);
+				edge.eulerTourEdge = AddForestEdge(vertex1, vertex2);
 			}
-			augmentAncestorFlags(vertex1.arbitraryVisit);
-			augmentAncestorFlags(vertex2.arbitraryVisit);
+			AugmentAncestorFlags(vertex1.arbitraryVisit);
+			AugmentAncestorFlags(vertex2.arbitraryVisit);
 
-			addToEdgeMap(edge, info1, connVertex2);
-			addToEdgeMap(edge, info2, connVertex1);
+			AddToEdgeMap(edge, info1, connVertex2);
+			AddToEdgeMap(edge, info2, connVertex1);
 			return true;
 		}
 
@@ -685,7 +685,7 @@ namespace Connectivity
 		/// Returns vertex.lowerVertex. If this is null, ensureLowerVertex sets vertex.lowerVertex to a new vertex and
 		/// returns it.
 		/// </summary>
-		private EulerTourVertex ensureLowerVertex(EulerTourVertex vertex)
+		private EulerTourVertex EnsureLowerVertex(EulerTourVertex vertex)
 		{
 			EulerTourVertex lowerVertex = vertex.lowerVertex;
 			if (lowerVertex == null)
@@ -696,9 +696,9 @@ namespace Connectivity
 				vertex.lowerVertex = lowerVertex;
 				lowerVertex.higherVertex = vertex;
 
-				lowerNode.left = EulerTourNode.LEAF;
-				lowerNode.right = EulerTourNode.LEAF;
-				lowerNode.augment();
+				lowerNode.left = EulerTourNode.leaf;
+				lowerNode.right = EulerTourNode.leaf;
+				lowerNode.Augment();
 			}
 			return lowerVertex;
 		}
@@ -707,7 +707,7 @@ namespace Connectivity
 		/// Pushes all level-i forest edges in the tree rooted at the specified node down to level i - 1, and adds them to
 		/// F_{i - 1}, where i is the level of the tree.
 		/// </summary>
-		private void pushForestEdges(EulerTourNode root)
+		private void PushForestEdges(EulerTourNode root)
 		{
 			// Iterate over all of the nodes that have hasForestEdge == true
 			if (!root.hasForestEdge || root.size == 1)
@@ -725,7 +725,7 @@ namespace Connectivity
 				ConnEdge edge = vertex.forestListHead;
 				if (edge != null)
 				{
-					EulerTourVertex lowerVertex = ensureLowerVertex(vertex);
+					EulerTourVertex lowerVertex = EnsureLowerVertex(vertex);
 					ConnEdge prevEdge = null;
 					while (edge != null)
 					{
@@ -738,8 +738,8 @@ namespace Connectivity
 						else
 						{
 							edge.vertex1 = lowerVertex;
-							edge.vertex2 = ensureLowerVertex(edge.vertex2);
-							EulerTourEdge lowerEdge = addForestEdge(edge.vertex1, edge.vertex2);
+							edge.vertex2 = EnsureLowerVertex(edge.vertex2);
+							EulerTourEdge lowerEdge = AddForestEdge(edge.vertex1, edge.vertex2);
 							lowerEdge.higherEdge = edge.eulerTourEdge;
 							edge.eulerTourEdge = lowerEdge;
 							prevEdge = edge;
@@ -769,7 +769,7 @@ namespace Connectivity
 					}
 					lowerVertex.forestListHead = vertex.forestListHead;
 					vertex.forestListHead = null;
-					augmentAncestorFlags(lowerVertex.arbitraryVisit);
+					AugmentAncestorFlags(lowerVertex.arbitraryVisit);
 				}
 
 				// Iterate to the next node with hasForestEdge == true, clearing hasForestEdge as we go
@@ -800,7 +800,7 @@ namespace Connectivity
 		/// down to level i - 1, adding them to G_{i - 1}. This method assumes that root.hasForestEdge is false. </summary>
 		/// <param name="root"> The root of the tree. </param>
 		/// <returns> The replacement edge, or null if there is no replacement edge. </returns>
-		private ConnEdge findReplacementEdge(EulerTourNode root)
+		private ConnEdge FindReplacementEdge(EulerTourNode root)
 		{
 			// Iterate over all of the nodes that have hasGraphEdge == true
 			if (!root.hasGraphEdge)
@@ -835,7 +835,7 @@ namespace Connectivity
 							nextEdge = edge.next2;
 						}
 
-						if (adjVertex.arbitraryVisit.root() != root)
+						if (adjVertex.arbitraryVisit.Root() != root)
 						{
 							replacementEdge = edge;
 							break;
@@ -845,29 +845,29 @@ namespace Connectivity
 						// of "vertex" later.
 						if (edge.vertex1 == adjVertex)
 						{
-							removeFromLinkedList1(edge);
+							RemoveFromLinkedList1(edge);
 						}
 						else
 						{
-							removeFromLinkedList2(edge);
+							RemoveFromLinkedList2(edge);
 						}
-						augmentAncestorFlags(adjVertex.arbitraryVisit);
+						AugmentAncestorFlags(adjVertex.arbitraryVisit);
 
 						// Push the edge down to level i - 1
-						edge.vertex1 = ensureLowerVertex(edge.vertex1);
-						edge.vertex2 = ensureLowerVertex(edge.vertex2);
+						edge.vertex1 = EnsureLowerVertex(edge.vertex1);
+						edge.vertex2 = EnsureLowerVertex(edge.vertex2);
 
 						// Add the edge to the adjacency list of adjVertex.lowerVertex. We will add it to the adjacency list
 						// of lowerVertex later.
 						if (edge.vertex1 != vertex.lowerVertex)
 						{
-							addToGraphLinkedList1(edge);
+							AddToGraphLinkedList1(edge);
 						}
 						else
 						{
-							addToGraphLinkedList2(edge);
+							AddToGraphLinkedList2(edge);
 						}
-						augmentAncestorFlags(adjVertex.lowerVertex.arbitraryVisit);
+						AugmentAncestorFlags(adjVertex.lowerVertex.arbitraryVisit);
 
 						prevEdge = edge;
 						edge = nextEdge;
@@ -897,12 +897,12 @@ namespace Connectivity
 							}
 						}
 						lowerVertex.graphListHead = vertex.graphListHead;
-						augmentAncestorFlags(lowerVertex.arbitraryVisit);
+						AugmentAncestorFlags(lowerVertex.arbitraryVisit);
 					}
 					vertex.graphListHead = edge;
 					if (edge == null)
 					{
-						augmentAncestorFlags(vertex.arbitraryVisit);
+						AugmentAncestorFlags(vertex.arbitraryVisit);
 					}
 					else if (edge.vertex1 == vertex)
 					{
@@ -944,7 +944,7 @@ namespace Connectivity
 		/// Removes the edge from srcInfo to destVertex from the edge map for srcInfo (srcInfo.edges), if it is present.
 		/// Returns the edge that we removed, if any.
 		/// </summary>
-		private ConnEdge removeFromEdgeMap(VertexInfo srcInfo, ConnVertex destVertex)
+		private ConnEdge RemoveFromEdgeMap(VertexInfo srcInfo, ConnVertex destVertex)
 		{
 			if (srcInfo.edges.TryGetValue(destVertex, out var edge))
 			{
@@ -967,33 +967,33 @@ namespace Connectivity
 		/// Removes the edge between the specified vertices, if there is such an edge. Taken together with addEdge, this
 		/// method takes O(log^2 N) amortized time with high probability. </summary>
 		/// <returns> Whether there was an edge between the vertices. </returns>
-		public virtual bool removeEdge(ConnVertex vertex1, ConnVertex vertex2)
+		public virtual bool RemoveEdge(ConnVertex vertex1, ConnVertex vertex2)
 		{
 			if (vertex1 == vertex2)
 			{
-				throw new System.ArgumentException("Self-loops are not allowed");
+				throw new ArgumentException("Self-loops are not allowed");
 			}
 
-			if (!vertexInfo.TryGetValue(vertex1, out var info1))
+			if (!_vertexInfo.TryGetValue(vertex1, out var info1))
 				return false;
 
-			ConnEdge edge = removeFromEdgeMap(info1, vertex2);
+			ConnEdge edge = RemoveFromEdgeMap(info1, vertex2);
 			if (edge == null)
 			{
 				return false;
 			}
-			VertexInfo info2 = vertexInfo[vertex2];
-			removeFromEdgeMap(info2, vertex1);
+			VertexInfo info2 = _vertexInfo[vertex2];
+			RemoveFromEdgeMap(info2, vertex1);
 
-			removeFromLinkedLists(edge);
-			augmentAncestorFlags(edge.vertex1.arbitraryVisit);
-			augmentAncestorFlags(edge.vertex2.arbitraryVisit);
+			RemoveFromLinkedLists(edge);
+			AugmentAncestorFlags(edge.vertex1.arbitraryVisit);
+			AugmentAncestorFlags(edge.vertex2.arbitraryVisit);
 
 			if (edge.eulerTourEdge != null)
 			{
 				for (EulerTourEdge levelEdge = edge.eulerTourEdge; levelEdge != null; levelEdge = levelEdge.higherEdge)
 				{
-					removeForestEdge(levelEdge);
+					RemoveForestEdge(levelEdge);
 				}
 				edge.eulerTourEdge = null;
 
@@ -1003,8 +1003,8 @@ namespace Connectivity
 				EulerTourVertex levelVertex2 = edge.vertex2;
 				while (levelVertex1 != null)
 				{
-					EulerTourNode root1 = levelVertex1.arbitraryVisit.root();
-					EulerTourNode root2 = levelVertex2.arbitraryVisit.root();
+					EulerTourNode root1 = levelVertex1.arbitraryVisit.Root();
+					EulerTourNode root2 = levelVertex2.arbitraryVisit.Root();
 
 					// Optimization: if hasGraphEdge is false for one of the roots, then there definitely isn't a
 					// replacement edge at this level
@@ -1020,8 +1020,8 @@ namespace Connectivity
 							root = root2;
 						}
 
-						pushForestEdges(root);
-						replacementEdge = findReplacementEdge(root);
+						PushForestEdges(root);
+						replacementEdge = FindReplacementEdge(root);
 						if (replacementEdge != null)
 						{
 							break;
@@ -1045,16 +1045,16 @@ namespace Connectivity
 				if (replacementEdge != null)
 				{
 					// Add the replacement edge to all of the forests at or above the current level
-					removeFromLinkedLists(replacementEdge);
-					addToForestLinkedLists(replacementEdge);
+					RemoveFromLinkedLists(replacementEdge);
+					AddToForestLinkedLists(replacementEdge);
 					EulerTourVertex replacementVertex1 = replacementEdge.vertex1;
 					EulerTourVertex replacementVertex2 = replacementEdge.vertex2;
-					augmentAncestorFlags(replacementVertex1.arbitraryVisit);
-					augmentAncestorFlags(replacementVertex2.arbitraryVisit);
+					AugmentAncestorFlags(replacementVertex1.arbitraryVisit);
+					AugmentAncestorFlags(replacementVertex2.arbitraryVisit);
 					EulerTourEdge lowerEdge = null;
 					while (replacementVertex1 != null)
 					{
-						EulerTourEdge levelEdge = addForestEdge(replacementVertex1, replacementVertex2);
+						EulerTourEdge levelEdge = AddForestEdge(replacementVertex1, replacementVertex2);
 						if (lowerEdge == null)
 						{
 							replacementEdge.eulerTourEdge = levelEdge;
@@ -1073,11 +1073,11 @@ namespace Connectivity
 
 			if (info1.edges.Count == 0 && !info1.vertex.hasAugmentation)
 			{
-				remove(vertex1);
+				Remove(vertex1);
 			}
 			if (info2.edges.Count == 0 && !info2.vertex.hasAugmentation)
 			{
-				remove(vertex2);
+				Remove(vertex2);
 			}
 			return true;
 		}
@@ -1086,17 +1086,17 @@ namespace Connectivity
 		/// Returns whether the specified vertices are connected - whether there is a path between them. Returns true if
 		/// vertex1 == vertex2. This method takes O(log N) time with high probability.
 		/// </summary>
-		public virtual bool connected(ConnVertex vertex1, ConnVertex vertex2)
+		public virtual bool Connected(ConnVertex vertex1, ConnVertex vertex2)
 		{
 			if (vertex1 == vertex2)
 			{
 				return true;
 			}
 
-			if (vertexInfo.TryGetValue(vertex1, out var info1)
-			 && vertexInfo.TryGetValue(vertex2, out var info2))
+			if (_vertexInfo.TryGetValue(vertex1, out var info1)
+			 && _vertexInfo.TryGetValue(vertex2, out var info2))
 			{
-				return info1.vertex.arbitraryVisit.root() == info2.vertex.arbitraryVisit.root();
+				return info1.vertex.arbitraryVisit.Root() == info2.vertex.arbitraryVisit.Root();
 			}
 
 			return false;
@@ -1104,9 +1104,9 @@ namespace Connectivity
 
 		/// <summary>
 		/// Returns the vertices that are directly adjacent to the specified vertex. </summary>
-		public virtual ICollection<ConnVertex> adjacentVertices(ConnVertex vertex)
+		public virtual ICollection<ConnVertex> AdjacentVertices(ConnVertex vertex)
 		{
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
 				return new List<ConnVertex>(info.edges.Keys);
 			}
@@ -1125,10 +1125,10 @@ namespace Connectivity
 		/// </summary>
 		/// <returns> The augmentation that was previously associated with the vertex. Returns null if it did not have any
 		///     associated augmentation. </returns>
-		public virtual object setVertexAugmentation(ConnVertex connVertex, object vertexAugmentation)
+		public virtual object SetVertexAugmentation(ConnVertex connVertex, object vertexAugmentation)
 		{
-			assertIsAugmented();
-			EulerTourVertex vertex = ensureInfo(connVertex).vertex;
+			AssertIsAugmented();
+			EulerTourVertex vertex = EnsureInfo(connVertex).vertex;
 			object oldAugmentation = vertex.augmentation;
 			if (!vertex.hasAugmentation || (vertexAugmentation != null ?!vertexAugmentation.Equals(oldAugmentation) : oldAugmentation != null))
 			{
@@ -1136,7 +1136,7 @@ namespace Connectivity
 				vertex.hasAugmentation = true;
 				for (EulerTourNode node = vertex.arbitraryVisit; node != null; node = node.parent)
 				{
-					if (!node.augment())
+					if (!node.Augment())
 					{
 						break;
 					}
@@ -1150,10 +1150,10 @@ namespace Connectivity
 		/// probability. </summary>
 		/// <returns> The augmentation that was previously associated with the vertex. Returns null if it did not have any
 		///     associated augmentation. </returns>
-		public virtual object removeVertexAugmentation(ConnVertex connVertex)
+		public virtual object RemoveVertexAugmentation(ConnVertex connVertex)
 		{
-			assertIsAugmented();
-			VertexInfo info = vertexInfo[connVertex];
+			AssertIsAugmented();
+			VertexInfo info = _vertexInfo[connVertex];
 			if (info == null)
 			{
 				return null;
@@ -1163,7 +1163,7 @@ namespace Connectivity
 			object oldAugmentation = vertex.augmentation;
 			if (info.edges.Count == 0)
 			{
-				remove(connVertex);
+				Remove(connVertex);
 			}
 			else if (vertex.hasAugmentation)
 			{
@@ -1171,7 +1171,7 @@ namespace Connectivity
 				vertex.hasAugmentation = false;
 				for (EulerTourNode node = vertex.arbitraryVisit; node != null; node = node.parent)
 				{
-					if (!node.augment())
+					if (!node.Augment())
 					{
 						break;
 					}
@@ -1184,10 +1184,10 @@ namespace Connectivity
 		/// Returns the augmentation associated with the specified vertex. Returns null if it does not have any associated
 		/// augmentation. At present, this method takes constant expected time. Contrast with getComponentAugmentation.
 		/// </summary>
-		public virtual object getVertexAugmentation(ConnVertex vertex)
+		public virtual object GetVertexAugmentation(ConnVertex vertex)
 		{
-			assertIsAugmented();
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			AssertIsAugmented();
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
 				return info.vertex.augmentation;
 			}
@@ -1202,12 +1202,12 @@ namespace Connectivity
 		/// containing the specified vertex. Returns null if none of those vertices has any associated augmentation. This
 		/// method takes O(log N) time with high probability.
 		/// </summary>
-		public virtual object getComponentAugmentation(ConnVertex vertex)
+		public virtual object GetComponentAugmentation(ConnVertex vertex)
 		{
-			assertIsAugmented();
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			AssertIsAugmented();
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
-				return info.vertex.arbitraryVisit.root().augmentation;
+				return info.vertex.arbitraryVisit.Root().augmentation;
 			}
 			else
 			{
@@ -1219,10 +1219,10 @@ namespace Connectivity
 		/// Returns whether the specified vertex has any associated augmentation. At present, this method takes constant
 		/// expected time. Contrast with componentHasAugmentation.
 		/// </summary>
-		public virtual bool vertexHasAugmentation(ConnVertex vertex)
+		public virtual bool VertexHasAugmentation(ConnVertex vertex)
 		{
-			assertIsAugmented();
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			AssertIsAugmented();
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
 				return info.vertex.hasAugmentation;
 			}
@@ -1236,11 +1236,11 @@ namespace Connectivity
 		/// Returns whether any of the vertices in the connected component containing the specified vertex has any associated
 		/// augmentation. This method takes O(log N) time with high probability.
 		/// </summary>
-		public virtual bool componentHasAugmentation(ConnVertex vertex)
+		public virtual bool ComponentHasAugmentation(ConnVertex vertex)
 		{
-			if (vertexInfo.TryGetValue(vertex, out var info))
+			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
-				return info.vertex.arbitraryVisit.root().hasAugmentation;
+				return info.vertex.arbitraryVisit.Root().hasAugmentation;
 			}
 			else
 			{
@@ -1252,24 +1252,24 @@ namespace Connectivity
 		/// Clears this graph, by removing all edges and vertices, and removing all augmentation information from the
 		/// vertices.
 		/// </summary>
-		public virtual void clear()
+		public virtual void Clear()
 		{
 			// Note that we construct a new HashMap rather than calling vertexInfo.clear() in order to ensure a reduction in
 			// space
-			vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
-			maxLogVertexCountSinceRebuild = 0;
-			maxVertexInfoSize = 0;
+			_vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+			_maxLogVertexCountSinceRebuild = 0;
+			_maxVertexInfoSize = 0;
 		}
 
 		/// <summary>
 		/// Pushes all forest edges as far down as possible, so that any further pushes would violate the constraint on the
 		/// size of connected components. The current implementation of this method takes O(V log^2 V) time.
 		/// </summary>
-		private void optimizeForestEdges()
+		private void OptimizeForestEdges()
 		{
-			foreach (VertexInfo info in vertexInfo.Values)
+			foreach (VertexInfo info in _vertexInfo.Values)
 			{
-				int level = maxLogVertexCountSinceRebuild;
+				int level = _maxLogVertexCountSinceRebuild;
 				EulerTourVertex vertex;
 				for (vertex = info.vertex; vertex.lowerVertex != null; vertex = vertex.lowerVertex)
 				{
@@ -1298,7 +1298,7 @@ namespace Connectivity
 							int combinedSize = 1;
 							if (lowerVertex1.lowerVertex != null)
 							{
-								combinedSize += lowerVertex1.lowerVertex.arbitraryVisit.root().size;
+								combinedSize += lowerVertex1.lowerVertex.arbitraryVisit.Root().size;
 							}
 							else
 							{
@@ -1306,7 +1306,7 @@ namespace Connectivity
 							}
 							if (lowerVertex2.lowerVertex != null)
 							{
-								combinedSize += lowerVertex2.lowerVertex.arbitraryVisit.root().size;
+								combinedSize += lowerVertex2.lowerVertex.arbitraryVisit.Root().size;
 							}
 							else
 							{
@@ -1319,9 +1319,9 @@ namespace Connectivity
 								break;
 							}
 
-							lowerVertex1 = ensureLowerVertex(lowerVertex1);
-							lowerVertex2 = ensureLowerVertex(lowerVertex2);
-							EulerTourEdge lowerEdge = addForestEdge(lowerVertex1, lowerVertex2);
+							lowerVertex1 = EnsureLowerVertex(lowerVertex1);
+							lowerVertex2 = EnsureLowerVertex(lowerVertex2);
+							EulerTourEdge lowerEdge = AddForestEdge(lowerVertex1, lowerVertex2);
 							lowerEdge.higherEdge = edge.eulerTourEdge;
 							edge.eulerTourEdge = lowerEdge;
 						}
@@ -1329,15 +1329,15 @@ namespace Connectivity
 						if (lowerVertex1 != vertex)
 						{
 							// We pushed the edge down at least one level
-							removeFromLinkedLists(edge);
-							augmentAncestorFlags(node);
-							augmentAncestorFlags(edge.vertex2.arbitraryVisit);
+							RemoveFromLinkedLists(edge);
+							AugmentAncestorFlags(node);
+							AugmentAncestorFlags(edge.vertex2.arbitraryVisit);
 
 							edge.vertex1 = lowerVertex1;
 							edge.vertex2 = lowerVertex2;
-							addToForestLinkedLists(edge);
-							augmentAncestorFlags(lowerVertex1.arbitraryVisit);
-							augmentAncestorFlags(lowerVertex2.arbitraryVisit);
+							AddToForestLinkedLists(edge);
+							AugmentAncestorFlags(lowerVertex1.arbitraryVisit);
+							AugmentAncestorFlags(lowerVertex2.arbitraryVisit);
 						}
 
 						edge = nextEdge;
@@ -1353,9 +1353,9 @@ namespace Connectivity
 		/// Pushes each non-forest edge down to the lowest level where the endpoints are in the same connected component. The
 		/// current implementation of this method takes O(V log V + E log V log log V) time.
 		/// </summary>
-		private void optimizeGraphEdges()
+		private void OptimizeGraphEdges()
 		{
-			foreach (VertexInfo info in vertexInfo.Values)
+			foreach (VertexInfo info in _vertexInfo.Values)
 			{
 				EulerTourVertex vertex;
 				for (vertex = info.vertex; vertex.lowerVertex != null; vertex = vertex.lowerVertex)
@@ -1400,7 +1400,7 @@ namespace Connectivity
 								lowerVertex2 = lowerVertex2.lowerVertex;
 							}
 
-							if (lowerVertex1.arbitraryVisit.root() != lowerVertex2.arbitraryVisit.root())
+							if (lowerVertex1.arbitraryVisit.Root() != lowerVertex2.arbitraryVisit.Root())
 							{
 								maxLevelsDown = levelsDown - 1;
 							}
@@ -1414,15 +1414,15 @@ namespace Connectivity
 
 						if (levelVertex1 != vertex)
 						{
-							removeFromLinkedLists(edge);
-							augmentAncestorFlags(node);
-							augmentAncestorFlags(edge.vertex2.arbitraryVisit);
+							RemoveFromLinkedLists(edge);
+							AugmentAncestorFlags(node);
+							AugmentAncestorFlags(edge.vertex2.arbitraryVisit);
 
 							edge.vertex1 = levelVertex1;
 							edge.vertex2 = levelVertex2;
-							addToGraphLinkedLists(edge);
-							augmentAncestorFlags(levelVertex1.arbitraryVisit);
-							augmentAncestorFlags(levelVertex2.arbitraryVisit);
+							AddToGraphLinkedLists(edge);
+							AugmentAncestorFlags(levelVertex1.arbitraryVisit);
+							AugmentAncestorFlags(levelVertex2.arbitraryVisit);
 						}
 
 						edge = nextEdge;
@@ -1438,12 +1438,12 @@ namespace Connectivity
 		/// optimize() when there is some downtime. Note that this method generally increases the amount of space the
 		/// ConnGraph uses, but not beyond the bound of O(V log V + E).
 		/// </summary>
-		public virtual void optimize()
+		public virtual void Optimize()
 		{
 			// The current implementation of optimize() takes O(V log^2 V + E log V log log V) time
-			rebuild();
-			optimizeForestEdges();
-			optimizeGraphEdges();
+			Rebuild();
+			OptimizeForestEdges();
+			OptimizeGraphEdges();
 		}
 	}
 

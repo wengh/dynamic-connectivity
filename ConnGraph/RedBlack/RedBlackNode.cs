@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace com.github.btrekkie.red_black_node
+namespace Connectivity.RedBlack
 {
 
 	/// <summary>
@@ -33,11 +33,11 @@ namespace com.github.btrekkie.red_black_node
 	/// @param <N> The type of node in the tree. For example, we might have
 	///     "class FooNode<T> extends RedBlackNode<FooNode<T>>".
 	/// @author Bill Jacobs </param>
-	public abstract class RedBlackNode<N> : IComparable<N> where N : RedBlackNode<N>
+	public abstract class RedBlackNode<TN> : IComparable<TN> where TN : RedBlackNode<TN>
 	{
 		/// <summary>
 		/// A Comparator that compares Comparable elements using their natural order. </summary>
-		private static readonly IComparer<IComparable<object>> NATURAL_ORDER = new ComparatorAnonymousInnerClass();
+		private static readonly IComparer<IComparable<object>> _naturalOrder = new ComparatorAnonymousInnerClass();
 
 		private class ComparatorAnonymousInnerClass : IComparer<IComparable<object>>
 		{
@@ -49,15 +49,15 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// The parent of this node, if any.  "parent" is null if this is a leaf node. </summary>
-		public N parent;
+		public TN parent;
 
 		/// <summary>
 		/// The left child of this node.  "left" is null if this is a leaf node. </summary>
-		public N left;
+		public TN left;
 
 		/// <summary>
 		/// The right child of this node.  "right" is null if this is a leaf node. </summary>
-		public N right;
+		public TN right;
 
 		/// <summary>
 		/// Whether the node is colored red, as opposed to black. </summary>
@@ -68,12 +68,12 @@ namespace com.github.btrekkie.red_black_node
 		/// example, if we augment each node by subtree size (the number of non-leaf nodes in the subtree), this method would
 		/// set the size field of this node to be equal to the size field of the left child plus the size field of the right
 		/// child plus one.
-		/// 
+		///
 		/// "Augmentation information" is information that we can compute about a subtree rooted at some node, preferably
 		/// based only on the augmentation information in the node's two children and the information in the node.  Examples
 		/// of augmentation information are the sum of the values in a subtree and the number of non-leaf nodes in a subtree.
 		/// Augmentation information may not depend on the colors of the nodes.
-		/// 
+		///
 		/// This method returns whether the augmentation information in any of the ancestors of this node might have been
 		/// affected by changes in this subtree since the last call to augment().  In the usual case, where the augmentation
 		/// information depends only on the information in this node and the augmentation information in its immediate
@@ -82,13 +82,13 @@ namespace com.github.btrekkie.red_black_node
 		/// calling augment() differed from the size field of the left child plus the size field of the right child plus one.
 		/// False positives are permitted.  The return value is unspecified if we have not called augment() on this node
 		/// before.
-		/// 
+		///
 		/// This method may assume that this is not a leaf node.  It may not assume that the augmentation information stored
 		/// in any of the tree's nodes is correct.  However, if the augmentation information stored in all of the node's
 		/// descendants is correct, then the augmentation information stored in this node must be correct after calling
 		/// augment().
 		/// </summary>
-		public virtual bool augment()
+		public virtual bool Augment()
 		{
 			return false;
 		}
@@ -98,7 +98,7 @@ namespace com.github.btrekkie.red_black_node
 		/// of RedBlackNode.  For example, if this stores the size of the subtree rooted at this node, this should throw a
 		/// RuntimeException if the size field of this is not equal to the size field of the left child plus the size field
 		/// of the right child plus one.  Note that we may call this on a leaf node.
-		/// 
+		///
 		/// assertSubtreeIsValid() calls assertNodeIsValid() on each node, or at least starts to do so until it detects a
 		/// problem.  assertNodeIsValid() should assume the node is in a tree that satisfies all properties common to all
 		/// red-black trees, as assertSubtreeIsValid() is responsible for such checks.  assertNodeIsValid() should be
@@ -107,26 +107,20 @@ namespace com.github.btrekkie.red_black_node
 		/// concerning ordering, override assertSubtreeIsValid().  assertOrderIsValid is useful for checking the BST
 		/// property.
 		/// </summary>
-		public virtual void assertNodeIsValid()
+		public virtual void AssertNodeIsValid()
 		{
 
 		}
 
 		/// <summary>
 		/// Returns whether this is a leaf node. </summary>
-		public virtual bool Leaf
-		{
-			get
-			{
-				return left == null;
-			}
-		}
+		public virtual bool IsLeaf => left == null;
 
 		/// <summary>
 		/// Returns the root of the tree that contains this node. </summary>
-		public virtual N root()
+		public virtual TN Root()
 		{
-			N node = (N)this;
+			TN node = (TN)this;
 			while (node.parent != null)
 			{
 				node = node.parent;
@@ -136,14 +130,14 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// Returns the first node in the subtree rooted at this node, if any. </summary>
-		public virtual N min()
+		public virtual TN Min()
 		{
-			if (Leaf)
+			if (IsLeaf)
 			{
-				return default(N);
+				return default;
 			}
-			N node = (N)this;
-			while (!node.left.Leaf)
+			TN node = (TN)this;
+			while (!node.left.IsLeaf)
 			{
 				node = node.left;
 			}
@@ -152,14 +146,14 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// Returns the last node in the subtree rooted at this node, if any. </summary>
-		public virtual N max()
+		public virtual TN Max()
 		{
-			if (Leaf)
+			if (IsLeaf)
 			{
-				return default(N);
+				return default;
 			}
-			N node = (N)this;
-			while (!node.right.Leaf)
+			TN node = (TN)this;
+			while (!node.right.IsLeaf)
 			{
 				node = node.right;
 			}
@@ -168,12 +162,12 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// Returns the node immediately before this in the tree that contains this node, if any. </summary>
-		public virtual N predecessor()
+		public virtual TN Predecessor()
 		{
-			if (!left.Leaf)
+			if (!left.IsLeaf)
 			{
-				N node;
-				for (node = left; !node.right.Leaf; node = node.right)
+				TN node;
+				for (node = left; !node.right.IsLeaf; node = node.right)
 				{
 					;
 				}
@@ -181,11 +175,11 @@ namespace com.github.btrekkie.red_black_node
 			}
 			else if (parent == null)
 			{
-				return default(N);
+				return default;
 			}
 			else
 			{
-				N node = (N)this;
+				TN node = (TN)this;
 				while (node.parent != null && node.parent.left == node)
 				{
 					node = node.parent;
@@ -196,12 +190,12 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// Returns the node immediately after this in the tree that contains this node, if any. </summary>
-		public virtual N successor()
+		public virtual TN Successor()
 		{
-			if (!right.Leaf)
+			if (!right.IsLeaf)
 			{
-				N node;
-				for (node = right; !node.left.Leaf; node = node.left)
+				TN node;
+				for (node = right; !node.left.IsLeaf; node = node.left)
 				{
 					;
 				}
@@ -209,11 +203,11 @@ namespace com.github.btrekkie.red_black_node
 			}
 			else if (parent == null)
 			{
-				return default(N);
+				return default;
 			}
 			else
 			{
-				N node = (N)this;
+				TN node = (TN)this;
 				while (node.parent != null && node.parent.right == node)
 				{
 					node = node.parent;
@@ -227,16 +221,16 @@ namespace com.github.btrekkie.red_black_node
 		/// augment() on this node and on its resulting parent. However, it does not call augment() on any of the resulting
 		/// parent's ancestors, because that is normally the responsibility of the caller. </summary>
 		/// <returns> The return value from calling augment() on the resulting parent. </returns>
-		public virtual bool rotateLeft()
+		public virtual bool RotateLeft()
 		{
-			if (Leaf || right.Leaf)
+			if (IsLeaf || right.IsLeaf)
 			{
-				throw new System.ArgumentException("The node or its right child is a leaf");
+				throw new ArgumentException("The node or its right child is a leaf");
 			}
-			N newParent = right;
+			TN newParent = right;
 			right = newParent.left;
-			N nThis = (N)this;
-			if (!right.Leaf)
+			TN nThis = (TN)this;
+			if (!right.IsLeaf)
 			{
 				right.parent = nThis;
 			}
@@ -254,8 +248,8 @@ namespace com.github.btrekkie.red_black_node
 					newParent.parent.right = newParent;
 				}
 			}
-			augment();
-			return newParent.augment();
+			Augment();
+			return newParent.Augment();
 		}
 
 		/// <summary>
@@ -263,16 +257,16 @@ namespace com.github.btrekkie.red_black_node
 		/// augment() on this node and on its resulting parent. However, it does not call augment() on any of the resulting
 		/// parent's ancestors, because that is normally the responsibility of the caller. </summary>
 		/// <returns> The return value from calling augment() on the resulting parent. </returns>
-		public virtual bool rotateRight()
+		public virtual bool RotateRight()
 		{
-			if (Leaf || left.Leaf)
+			if (IsLeaf || left.IsLeaf)
 			{
-				throw new System.ArgumentException("The node or its left child is a leaf");
+				throw new ArgumentException("The node or its left child is a leaf");
 			}
-			N newParent = left;
+			TN newParent = left;
 			left = newParent.right;
-			N nThis = (N)this;
-			if (!left.Leaf)
+			TN nThis = (TN)this;
+			if (!left.IsLeaf)
 			{
 				left.parent = nThis;
 			}
@@ -290,8 +284,8 @@ namespace com.github.btrekkie.red_black_node
 					newParent.parent.right = newParent;
 				}
 			}
-			augment();
-			return newParent.augment();
+			Augment();
+			return newParent.Augment();
 		}
 
 		/// <summary>
@@ -301,23 +295,23 @@ namespace com.github.btrekkie.red_black_node
 		/// any rotations by calling rotateLeft() and rotateRight().  This method is more efficient than fixInsertion if
 		/// "augment" is false or augment() might return false. </summary>
 		/// <param name="augment"> Whether to set the augmentation information for "node" and its ancestors, by calling augment(). </param>
-		public virtual void fixInsertionWithoutGettingRoot(bool augment)
+		public virtual void FixInsertionWithoutGettingRoot(bool augment)
 		{
 			if (!isRed)
 			{
-				throw new System.ArgumentException("The node must be red");
+				throw new ArgumentException("The node must be red");
 			}
 			bool changed = augment;
 			if (augment)
 			{
-				this.augment();
+				Augment();
 			}
 
-			RedBlackNode<N> node = this;
+			RedBlackNode<TN> node = this;
 			while (node.parent != null && node.parent.isRed)
 			{
-				N parent = node.parent;
-				N grandparent = parent.parent;
+				TN parent = node.parent;
+				TN grandparent = parent.parent;
 				if (grandparent.left.isRed && grandparent.right.isRed)
 				{
 					grandparent.left.isRed = false;
@@ -326,10 +320,10 @@ namespace com.github.btrekkie.red_black_node
 
 					if (changed)
 					{
-						changed = parent.augment();
+						changed = parent.Augment();
 						if (changed)
 						{
-							changed = grandparent.augment();
+							changed = grandparent.Augment();
 						}
 					}
 					node = grandparent;
@@ -340,21 +334,21 @@ namespace com.github.btrekkie.red_black_node
 					{
 						if (grandparent.right == parent)
 						{
-							parent.rotateRight();
+							parent.RotateRight();
 							node = parent;
 							parent = node.parent;
 						}
 					}
 					else if (grandparent.left == parent)
 					{
-						parent.rotateLeft();
+						parent.RotateLeft();
 						node = parent;
 						parent = node.parent;
 					}
 
 					if (parent.left == node)
 					{
-						bool grandparentChanged = grandparent.rotateRight();
+						bool grandparentChanged = grandparent.RotateRight();
 						if (augment)
 						{
 							changed = grandparentChanged;
@@ -362,7 +356,7 @@ namespace com.github.btrekkie.red_black_node
 					}
 					else
 					{
-						bool grandparentChanged = grandparent.rotateLeft();
+						bool grandparentChanged = grandparent.RotateLeft();
 						if (augment)
 						{
 							changed = grandparentChanged;
@@ -384,7 +378,7 @@ namespace com.github.btrekkie.red_black_node
 			{
 				for (node = node.parent; node != null; node = node.parent)
 				{
-					if (!node.augment())
+					if (!node.Augment())
 					{
 						break;
 					}
@@ -399,9 +393,9 @@ namespace com.github.btrekkie.red_black_node
 		/// any rotations by calling rotateLeft() and rotateRight().  This method is more efficient than fixInsertion() if
 		/// augment() might return false.
 		/// </summary>
-		public virtual void fixInsertionWithoutGettingRoot()
+		public virtual void FixInsertionWithoutGettingRoot()
 		{
-			fixInsertionWithoutGettingRoot(true);
+			FixInsertionWithoutGettingRoot(true);
 		}
 
 		/// <summary>
@@ -411,10 +405,10 @@ namespace com.github.btrekkie.red_black_node
 		/// any rotations by calling rotateLeft() and rotateRight(). </summary>
 		/// <param name="augment"> Whether to set the augmentation information for "node" and its ancestors, by calling augment(). </param>
 		/// <returns> The root of the resulting tree. </returns>
-		public virtual N fixInsertion(bool augment)
+		public virtual TN FixInsertion(bool augment)
 		{
-			fixInsertionWithoutGettingRoot(augment);
-			return root();
+			FixInsertionWithoutGettingRoot(augment);
+			return Root();
 		}
 
 		/// <summary>
@@ -423,25 +417,25 @@ namespace com.github.btrekkie.red_black_node
 		/// red.  node.isRed must initially be true.  This method assumes that this is not a leaf node.  The method performs
 		/// any rotations by calling rotateLeft() and rotateRight(). </summary>
 		/// <returns> The root of the resulting tree. </returns>
-		public virtual N fixInsertion()
+		public virtual TN FixInsertion()
 		{
-			fixInsertionWithoutGettingRoot(true);
-			return root();
+			FixInsertionWithoutGettingRoot(true);
+			return Root();
 		}
 
 		/// <summary>
 		/// Returns a Comparator that compares instances of N using their natural order, as in N.compareTo. </summary>
-		private IComparer<N> naturalOrder()
+		private IComparer<TN> NaturalOrder()
 		{
-			System.Collections.IComparer comparator = (System.Collections.IComparer)NATURAL_ORDER;
-			return (IComparer<N>)comparator;
+			System.Collections.IComparer comparator = (System.Collections.IComparer)_naturalOrder;
+			return (IComparer<TN>)comparator;
 		}
 
 		/// <summary>
 		/// Inserts the specified node into the tree rooted at this node. Assumes this is the root. We treat newNode as a
 		/// solitary node that does not belong to any tree, and we ignore its initial "parent", "left", "right", and isRed
 		/// fields.
-		/// 
+		///
 		/// If it is not efficient or convenient to find the location for a node using a Comparator, then you should manually
 		/// add the node to the appropriate location, color it red, and call fixInsertion().
 		/// </summary>
@@ -454,35 +448,35 @@ namespace com.github.btrekkie.red_black_node
 		/// <returns> The root of the resulting tree. </returns>
 //JAVA TO C# CONVERTER TODO TASK: There is no C# equivalent to the Java 'super' constraint:
 //ORIGINAL LINE: public N insert(N newNode, boolean allowDuplicates, java.util.Comparator<? super N> comparator)
-		public virtual N insert(N newNode, bool allowDuplicates, IComparer<N> comparator)
+		public virtual TN Insert(TN newNode, bool allowDuplicates, IComparer<TN> comparator)
 		{
 			if (parent != null)
 			{
-				throw new System.ArgumentException("This is not the root of a tree");
+				throw new ArgumentException("This is not the root of a tree");
 			}
-			N nThis = (N)this;
-			if (Leaf)
+			TN nThis = (TN)this;
+			if (IsLeaf)
 			{
 				newNode.isRed = false;
 				newNode.left = nThis;
 				newNode.right = nThis;
 				newNode.parent = null;
-				newNode.augment();
+				newNode.Augment();
 				return newNode;
 			}
 			if (comparator == null)
 			{
-				comparator = naturalOrder();
+				comparator = NaturalOrder();
 			}
 
-			N node = nThis;
+			TN node = nThis;
 			int comparison;
 			while (true)
 			{
 				comparison = comparator.Compare(newNode, node);
 				if (comparison < 0)
 				{
-					if (!node.left.Leaf)
+					if (!node.left.IsLeaf)
 					{
 						node = node.left;
 					}
@@ -497,7 +491,7 @@ namespace com.github.btrekkie.red_black_node
 				}
 				else if (comparison > 0 || allowDuplicates)
 				{
-					if (!node.right.Leaf)
+					if (!node.right.IsLeaf)
 					{
 						node = node.right;
 					}
@@ -517,20 +511,20 @@ namespace com.github.btrekkie.red_black_node
 				}
 			}
 			newNode.isRed = true;
-			return newNode.fixInsertion();
+			return newNode.FixInsertion();
 		}
 
 		/// <summary>
 		/// Moves this node to its successor's former position in the tree and vice versa, i.e. sets the "left", "right",
 		/// "parent", and isRed fields of each.  This method assumes that this is not a leaf node. </summary>
 		/// <returns> The node with which we swapped. </returns>
-		private N swapWithSuccessor()
+		private TN SwapWithSuccessor()
 		{
-			N replacement = successor();
+			TN replacement = Successor();
 			bool oldReplacementIsRed = replacement.isRed;
-			N oldReplacementLeft = replacement.left;
-			N oldReplacementRight = replacement.right;
-			N oldReplacementParent = replacement.parent;
+			TN oldReplacementLeft = replacement.left;
+			TN oldReplacementRight = replacement.right;
+			TN oldReplacementParent = replacement.parent;
 
 			replacement.isRed = isRed;
 			replacement.left = left;
@@ -548,7 +542,7 @@ namespace com.github.btrekkie.red_black_node
 				}
 			}
 
-			N nThis = (N)this;
+			TN nThis = (TN)this;
 			isRed = oldReplacementIsRed;
 			left = oldReplacementLeft;
 			right = oldReplacementRight;
@@ -564,11 +558,11 @@ namespace com.github.btrekkie.red_black_node
 			}
 
 			replacement.right.parent = replacement;
-			if (!replacement.left.Leaf)
+			if (!replacement.left.IsLeaf)
 			{
 				replacement.left.parent = replacement;
 			}
-			if (!right.Leaf)
+			if (!right.IsLeaf)
 			{
 				right.parent = nThis;
 			}
@@ -580,27 +574,27 @@ namespace com.github.btrekkie.red_black_node
 		/// of red-black trees, except that all paths from the root to a leaf that pass through the sibling of this node have
 		/// one fewer black node than all other root-to-leaf paths.  This method assumes that this is not a leaf node.
 		/// </summary>
-		private void fixSiblingDeletion()
+		private void FixSiblingDeletion()
 		{
-			RedBlackNode<N> sibling = this;
+			RedBlackNode<TN> sibling = this;
 			bool changed = true;
 			bool haveAugmentedParent = false;
 			bool haveAugmentedGrandparent = false;
 			while (true)
 			{
-				N parent1 = sibling.parent;
+				TN parent1 = sibling.parent;
 				if (sibling.isRed)
 				{
 					parent1.isRed = true;
 					sibling.isRed = false;
 					if (parent1.left == sibling)
 					{
-						changed = parent1.rotateRight();
+						changed = parent1.RotateRight();
 						sibling = parent1.left;
 					}
 					else
 					{
-						changed = parent1.rotateLeft();
+						changed = parent1.RotateLeft();
 						sibling = parent1.right;
 					}
 					haveAugmentedParent = true;
@@ -618,9 +612,9 @@ namespace com.github.btrekkie.red_black_node
 					{
 						if (changed && !haveAugmentedParent)
 						{
-							changed = parent1.augment();
+							changed = parent1.Augment();
 						}
-						N grandparent = parent1.parent;
+						TN grandparent = parent1.parent;
 						if (grandparent == null)
 						{
 							break;
@@ -643,13 +637,13 @@ namespace com.github.btrekkie.red_black_node
 					{
 						if (!sibling.left.isRed)
 						{
-							sibling.rotateLeft();
+							sibling.RotateLeft();
 							sibling = sibling.parent;
 						}
 					}
 					else if (!sibling.right.isRed)
 					{
-						sibling.rotateRight();
+						sibling.RotateRight();
 						sibling = sibling.parent;
 					}
 					sibling.isRed = parent1.isRed;
@@ -657,12 +651,12 @@ namespace com.github.btrekkie.red_black_node
 					if (sibling == parent1.left)
 					{
 						sibling.left.isRed = false;
-						changed = parent1.rotateRight();
+						changed = parent1.RotateRight();
 					}
 					else
 					{
 						sibling.right.isRed = false;
-						changed = parent1.rotateLeft();
+						changed = parent1.RotateLeft();
 					}
 					haveAugmentedParent = haveAugmentedGrandparent;
 					haveAugmentedGrandparent = false;
@@ -671,25 +665,25 @@ namespace com.github.btrekkie.red_black_node
 			}
 
 			// Update augmentation info
-			N parent2 = sibling.parent;
+			TN parent2 = sibling.parent;
 			if (changed && parent2 != null)
 			{
 				if (!haveAugmentedParent)
 				{
-					changed = parent2.augment();
+					changed = parent2.Augment();
 				}
 				if (changed && parent2.parent != null)
 				{
 					parent2 = parent2.parent;
 					if (!haveAugmentedGrandparent)
 					{
-						changed = parent2.augment();
+						changed = parent2.Augment();
 					}
 					if (changed)
 					{
 						for (parent2 = parent2.parent; parent2 != null; parent2 = parent2.parent)
 						{
-							if (!parent2.augment())
+							if (!parent2.Augment())
 							{
 								break;
 							}
@@ -703,38 +697,38 @@ namespace com.github.btrekkie.red_black_node
 		/// Removes this node from the tree that contains it.  The effect of this method on the fields of this node is
 		/// unspecified.  This method assumes that this is not a leaf node.  This method is more efficient than remove() if
 		/// augment() might return false.
-		/// 
+		///
 		/// If the node has two children, we begin by moving the node's successor to its former position, by changing the
 		/// successor's "left", "right", "parent", and isRed fields.
 		/// </summary>
-		public virtual void removeWithoutGettingRoot()
+		public virtual void RemoveWithoutGettingRoot()
 		{
-			if (Leaf)
+			if (IsLeaf)
 			{
-				throw new System.ArgumentException("Attempted to remove a leaf node");
+				throw new ArgumentException("Attempted to remove a leaf node");
 			}
-			N replacement;
-			if (left.Leaf || right.Leaf)
+			TN replacement;
+			if (left.IsLeaf || right.IsLeaf)
 			{
-				replacement = default(N);
+				replacement = default;
 			}
 			else
 			{
-				replacement = swapWithSuccessor();
+				replacement = SwapWithSuccessor();
 			}
 
-			N child;
-			if (!left.Leaf)
+			TN child;
+			if (!left.IsLeaf)
 			{
 				child = left;
 			}
-			else if (!right.Leaf)
+			else if (!right.IsLeaf)
 			{
 				child = right;
 			}
 			else
 			{
-				child = default(N);
+				child = default;
 			}
 
 			if (child != null)
@@ -756,10 +750,10 @@ namespace com.github.btrekkie.red_black_node
 
 				if (child.parent != null)
 				{
-					N parent;
+					TN parent;
 					for (parent = child.parent; parent != null; parent = parent.parent)
 					{
-						if (!parent.augment())
+						if (!parent.Augment())
 						{
 							break;
 						}
@@ -769,9 +763,9 @@ namespace com.github.btrekkie.red_black_node
 			else if (parent != null)
 			{
 				// Replace this node with a leaf node
-				N leaf = left;
-				N parent = this.parent;
-				N sibling;
+				TN leaf = left;
+				TN parent = this.parent;
+				TN sibling;
 				if (parent.left == this)
 				{
 					parent.left = leaf;
@@ -785,14 +779,14 @@ namespace com.github.btrekkie.red_black_node
 
 				if (!isRed)
 				{
-					RedBlackNode<N> siblingNode = sibling;
-					siblingNode.fixSiblingDeletion();
+					RedBlackNode<TN> siblingNode = sibling;
+					siblingNode.FixSiblingDeletion();
 				}
 				else
 				{
 					while (parent != null)
 					{
-						if (!parent.augment())
+						if (!parent.Augment())
 						{
 							break;
 						}
@@ -803,10 +797,10 @@ namespace com.github.btrekkie.red_black_node
 
 			if (replacement != null)
 			{
-				replacement.augment();
-				for (N parent = replacement.parent; parent != null; parent = parent.parent)
+				replacement.Augment();
+				for (TN parent = replacement.parent; parent != null; parent = parent.parent)
 				{
-					if (!parent.augment())
+					if (!parent.Augment())
 					{
 						break;
 					}
@@ -815,38 +809,38 @@ namespace com.github.btrekkie.red_black_node
 
 			// Clear any previously existing links, so that we're more likely to encounter an exception if we attempt to
 			// access the removed node
-			parent = default(N);
-			left = default(N);
-			right = default(N);
+			parent = default;
+			left = default;
+			right = default;
 			isRed = true;
 		}
 
 		/// <summary>
 		/// Removes this node from the tree that contains it.  The effect of this method on the fields of this node is
 		/// unspecified.  This method assumes that this is not a leaf node.
-		/// 
+		///
 		/// If the node has two children, we begin by moving the node's successor to its former position, by changing the
 		/// successor's "left", "right", "parent", and isRed fields.
 		/// </summary>
 		/// <returns> The root of the resulting tree. </returns>
-		public virtual N remove()
+		public virtual TN Remove()
 		{
-			if (Leaf)
+			if (IsLeaf)
 			{
-				throw new System.ArgumentException("Attempted to remove a leaf node");
+				throw new ArgumentException("Attempted to remove a leaf node");
 			}
 
 			// Find an arbitrary non-leaf node in the tree other than this node
-			N node;
+			TN node;
 			if (parent != null)
 			{
 				node = parent;
 			}
-			else if (!left.Leaf)
+			else if (!left.IsLeaf)
 			{
 				node = left;
 			}
-			else if (!right.Leaf)
+			else if (!right.IsLeaf)
 			{
 				node = right;
 			}
@@ -855,8 +849,8 @@ namespace com.github.btrekkie.red_black_node
 				return left;
 			}
 
-			removeWithoutGettingRoot();
-			return node.root();
+			RemoveWithoutGettingRoot();
+			return node.Root();
 		}
 
 		/// <summary>
@@ -872,7 +866,7 @@ namespace com.github.btrekkie.red_black_node
 		///     to 1 mod 4. </param>
 		/// <param name="leaf"> The leaf node. </param>
 		/// <returns> The root of the subtree. </returns>
-		private static T createTree<T, T1>(IEnumerator<T1> iterator, int size, int height, T leaf) where T : RedBlackNode<T> where T1 : T
+		private static T CreateTree<T, T1>(IEnumerator<T1> iterator, int size, int height, T leaf) where T : RedBlackNode<T> where T1 : T
 		{
 			if (size == 0)
 			{
@@ -880,25 +874,25 @@ namespace com.github.btrekkie.red_black_node
 			}
 			else
 			{
-				T left = createTree(iterator, (size - 1) / 2, height - 1, leaf);
+				T left = CreateTree(iterator, (size - 1) / 2, height - 1, leaf);
 //JAVA TO C# CONVERTER TODO TASK: Java iterators are only converted within the context of 'while' and 'for' loops:
 				iterator.MoveNext();
 				T node = iterator.Current;
-				T right = createTree(iterator, size / 2, height - 1, leaf);
+				T right = CreateTree(iterator, size / 2, height - 1, leaf);
 
 				node.isRed = height % 4 == 1;
 				node.left = left;
 				node.right = right;
-				if (!left.Leaf)
+				if (!left.IsLeaf)
 				{
 					left.parent = node;
 				}
-				if (!right.Leaf)
+				if (!right.IsLeaf)
 				{
 					right.parent = node;
 				}
 
-				node.augment();
+				node.Augment();
 				return node;
 			}
 		}
@@ -911,7 +905,7 @@ namespace com.github.btrekkie.red_black_node
 		/// <param name="nodes"> The nodes. </param>
 		/// <param name="leaf"> The leaf node. </param>
 		/// <returns> The root of the tree. </returns>
-		public static N createTree<N, T1>(ICollection<T1> nodes, N leaf) where N : RedBlackNode<N> where T1 : N
+		public static T CreateTree<T, TNode>(ICollection<TNode> nodes, T leaf) where T : RedBlackNode<T> where TNode : T
 		{
 			int size = nodes.Count;
 			if (size == 0)
@@ -925,7 +919,7 @@ namespace com.github.btrekkie.red_black_node
 				height++;
 			}
 
-			N node = createTree(nodes.GetEnumerator(), size, height, leaf);
+			T node = CreateTree(nodes.GetEnumerator(), size, height, leaf);
 			node.parent = null;
 			node.isRed = false;
 			return node;
@@ -937,11 +931,11 @@ namespace com.github.btrekkie.red_black_node
 		/// all of these nodes.  This method destroys the trees rooted at "this" and "last".  We treat "pivot" as a solitary
 		/// node that does not belong to any tree, and we ignore its initial "parent", "left", "right", and isRed fields.
 		/// This method assumes that this node and "last" are the roots of their respective trees.
-		/// 
+		///
 		/// This method takes O(log N) time.  It is more efficient than inserting "pivot" and then calling concatenate(last).
 		/// It is considerably more efficient than inserting "pivot" and all of the nodes in "last".
 		/// </summary>
-		public virtual N concatenate(N last, N pivot)
+		public virtual TN Concatenate(TN last, TN pivot)
 		{
 			// If the black height of "first", where first = this, is less than or equal to that of "last", starting at the
 			// root of "last", we keep going left until we reach a black node whose black height is equal to that of
@@ -951,17 +945,17 @@ namespace com.github.btrekkie.red_black_node
 
 			if (this.parent != null)
 			{
-				throw new System.ArgumentException("This is not the root of a tree");
+				throw new ArgumentException("This is not the root of a tree");
 			}
 			if (last.parent != null)
 			{
-				throw new System.ArgumentException("\"last\" is not the root of a tree");
+				throw new ArgumentException("\"last\" is not the root of a tree");
 			}
 
 			// Compute the black height of the trees
 			int firstBlackHeight = 0;
-			N first = (N)this;
-			for (N node = first; node != null; node = node.right)
+			TN first = (TN)this;
+			for (TN node = first; node != null; node = node.right)
 			{
 				if (!node.isRed)
 				{
@@ -969,7 +963,7 @@ namespace com.github.btrekkie.red_black_node
 				}
 			}
 			int lastBlackHeight = 0;
-			for (N node = last; node != null; node = node.right)
+			for (TN node = last; node != null; node = node.right)
 			{
 				if (!node.isRed)
 				{
@@ -978,12 +972,12 @@ namespace com.github.btrekkie.red_black_node
 			}
 
 			// Identify the children and parent of pivot
-			N firstChild = first;
-			N lastChild = last;
-			N parent;
+			TN firstChild = first;
+			TN lastChild = last;
+			TN parent;
 			if (firstBlackHeight <= lastBlackHeight)
 			{
-				parent = default(N);
+				parent = default;
 				int blackHeight = lastBlackHeight;
 				while (blackHeight > firstBlackHeight)
 				{
@@ -1002,7 +996,7 @@ namespace com.github.btrekkie.red_black_node
 			}
 			else
 			{
-				parent = default(N);
+				parent = default;
 				int blackHeight = firstBlackHeight;
 				while (blackHeight > lastBlackHeight)
 				{
@@ -1035,18 +1029,18 @@ namespace com.github.btrekkie.red_black_node
 				}
 			}
 			pivot.left = firstChild;
-			if (!firstChild.Leaf)
+			if (!firstChild.IsLeaf)
 			{
 				firstChild.parent = pivot;
 			}
 			pivot.right = lastChild;
-			if (!lastChild.Leaf)
+			if (!lastChild.IsLeaf)
 			{
 				lastChild.parent = pivot;
 			}
 
 			// Perform insertion fixup
-			return pivot.fixInsertion();
+			return pivot.FixInsertion();
 		}
 
 		/// <summary>
@@ -1056,26 +1050,26 @@ namespace com.github.btrekkie.red_black_node
 		/// roots of their respective trees.  This method takes O(log N) time.  It is considerably more efficient than
 		/// inserting all of the nodes in "last".
 		/// </summary>
-		public virtual N concatenate(N last)
+		public virtual TN Concatenate(TN last)
 		{
 			if (parent != null || last.parent != null)
 			{
-				throw new System.ArgumentException("The node is not the root of a tree");
+				throw new ArgumentException("The node is not the root of a tree");
 			}
-			if (Leaf)
+			if (IsLeaf)
 			{
 				return last;
 			}
-			else if (last.Leaf)
+			else if (last.IsLeaf)
 			{
-				N nThis = (N)this;
+				TN nThis = (TN)this;
 				return nThis;
 			}
 			else
 			{
-				N node = last.min();
-				last = node.remove();
-				return concatenate(last, node);
+				TN node = last.Min();
+				last = node.Remove();
+				return Concatenate(last, node);
 			}
 		}
 
@@ -1088,7 +1082,7 @@ namespace com.github.btrekkie.red_black_node
 		/// nodes at or after splitNode and then creating a new tree from those nodes. </summary>
 		/// <param name="The"> node at which to split the tree. </param>
 		/// <returns> An array consisting of the resulting trees. </returns>
-		public virtual N[] split(N splitNode)
+		public virtual TN[] Split(TN splitNode)
 		{
 			// To split the tree, we accumulate a pre-split tree and a post-split tree.  We walk down the tree toward the
 			// position where we are splitting.  Whenever we go left, we concatenate the right subtree with the post-split
@@ -1108,42 +1102,42 @@ namespace com.github.btrekkie.red_black_node
 			// advanceFirst: Whether to set "first" to be its next black descendant at the end of the loop.
 			// last, lastParent, lastPivot, advanceLast: Analogous to "first", firstParent, firstPivot, and advanceFirst,
 			//     but for the post-split tree.
-			if (this.parent != null)
+			if (parent != null)
 			{
-				throw new System.ArgumentException("This is not the root of a tree");
+				throw new ArgumentException("This is not the root of a tree");
 			}
-			if (Leaf || splitNode.Leaf)
+			if (IsLeaf || splitNode.IsLeaf)
 			{
-				throw new System.ArgumentException("The root or the split node is a leaf");
+				throw new ArgumentException("The root or the split node is a leaf");
 			}
 
 			// Create an array containing the path from the root to splitNode
 			int depth = 1;
-			N parent3;
+			TN parent3;
 			for (parent3 = splitNode; parent3.parent != null; parent3 = parent3.parent)
 			{
 				depth++;
 			}
 			if (parent3 != this)
 			{
-				throw new System.ArgumentException("The split node does not belong to this tree");
+				throw new ArgumentException("The split node does not belong to this tree");
 			}
 //JAVA TO C# CONVERTER WARNING: Java wildcard generics have no direct equivalent in C#:
 //ORIGINAL LINE: RedBlackNode<?>[] path = new RedBlackNode<?>[depth];
-			N[] path = new N[depth];
+			TN[] path = new TN[depth];
 			for (parent3 = splitNode; parent3 != null; parent3 = parent3.parent)
 			{
 				depth--;
 				path[depth] = parent3;
 			}
-			N node = (N)this;
-			N first = default(N);
-			N firstParent = default(N);
-			N last = default(N);
-			N lastParent = default(N);
-			N firstPivot = default(N);
-			N lastPivot = default(N);
-			while (!node.Leaf)
+			TN node = (TN)this;
+			TN first = default(TN);
+			TN firstParent = default(TN);
+			TN last = default(TN);
+			TN lastParent = default(TN);
+			TN firstPivot = default(TN);
+			TN lastPivot = default(TN);
+			while (!node.IsLeaf)
 			{
 				bool advanceFirst = !node.isRed && firstPivot != null;
 				bool advanceLast = !node.isRed && lastPivot != null;
@@ -1187,18 +1181,18 @@ namespace com.github.btrekkie.red_black_node
 							lastParent.left = lastPivot;
 						}
 						lastPivot.left = node.right;
-						if (!lastPivot.left.Leaf)
+						if (!lastPivot.left.IsLeaf)
 						{
 							lastPivot.left.parent = lastPivot;
 						}
 						lastPivot.right = last;
-						if (!last.Leaf)
+						if (!last.IsLeaf)
 						{
 							last.parent = lastPivot;
 						}
 						last = lastPivot.left;
 						lastParent = lastPivot;
-						lastPivot.fixInsertionWithoutGettingRoot(false);
+						lastPivot.FixInsertionWithoutGettingRoot(false);
 					}
 					lastPivot = node;
 					node = node.left;
@@ -1243,18 +1237,18 @@ namespace com.github.btrekkie.red_black_node
 							firstParent.right = firstPivot;
 						}
 						firstPivot.right = node.left;
-						if (!firstPivot.right.Leaf)
+						if (!firstPivot.right.IsLeaf)
 						{
 							firstPivot.right.parent = firstPivot;
 						}
 						firstPivot.left = first;
-						if (!first.Leaf)
+						if (!first.IsLeaf)
 						{
 							first.parent = firstPivot;
 						}
 						first = firstPivot.right;
 						firstParent = firstPivot;
-						firstPivot.fixInsertionWithoutGettingRoot(false);
+						firstPivot.FixInsertionWithoutGettingRoot(false);
 					}
 					firstPivot = node;
 					node = node.right;
@@ -1286,7 +1280,7 @@ namespace com.github.btrekkie.red_black_node
 			}
 
 			// Add firstPivot to the pre-split tree
-			N leaf = node;
+			TN leaf = node;
 			if (first == null)
 			{
 				first = leaf;
@@ -1301,12 +1295,12 @@ namespace com.github.btrekkie.red_black_node
 				}
 				firstPivot.left = leaf;
 				firstPivot.right = leaf;
-				firstPivot.fixInsertionWithoutGettingRoot(false);
+				firstPivot.FixInsertionWithoutGettingRoot(false);
 				for (first = firstPivot; first.parent != null; first = first.parent)
 				{
-					first.augment();
+					first.Augment();
 				}
-				first.augment();
+				first.Augment();
 			}
 
 			// Add lastPivot to the post-split tree
@@ -1318,14 +1312,14 @@ namespace com.github.btrekkie.red_black_node
 			}
 			lastPivot.left = leaf;
 			lastPivot.right = leaf;
-			lastPivot.fixInsertionWithoutGettingRoot(false);
+			lastPivot.FixInsertionWithoutGettingRoot(false);
 			for (last = lastPivot; last.parent != null; last = last.parent)
 			{
-				last.augment();
+				last.Augment();
 			}
-			last.augment();
+			last.Augment();
 
-			N[] result = (N[])Array.CreateInstance(this.GetType(), 2);
+			TN[] result = (TN[])Array.CreateInstance(GetType(), 2);
 			result[0] = first;
 			result[1] = last;
 			return result;
@@ -1335,33 +1329,33 @@ namespace com.github.btrekkie.red_black_node
 		/// Returns the lowest common ancestor of this node and "other" - the node that is an ancestor of both and is not the
 		/// parent of a node that is an ancestor of both. Assumes that this is in the same tree as "other". Assumes that
 		/// neither "this" nor "other" is a leaf node. This method may return "this" or "other".
-		/// 
+		///
 		/// Note that while it is possible to compute the lowest common ancestor in O(P) time, where P is the length of the
 		/// path from this node to "other", the "lca" method is not guaranteed to take O(P) time. If your application
 		/// requires this, then you should write your own lowest common ancestor method.
 		/// </summary>
-		public virtual N lca(N other)
+		public virtual TN Lca(TN other)
 		{
-			if (Leaf || other.Leaf)
+			if (IsLeaf || other.IsLeaf)
 			{
-				throw new System.ArgumentException("One of the nodes is a leaf node");
+				throw new ArgumentException("One of the nodes is a leaf node");
 			}
 
 			// Compute the depth of each node
 			int depth = 0;
-			for (N parent1 = this.parent; parent1 != null; parent1 = parent1.parent)
+			for (TN parent1 = parent; parent1 != null; parent1 = parent1.parent)
 			{
 				depth++;
 			}
 			int otherDepth = 0;
-			for (N parent2 = other.parent; parent2 != null; parent2 = parent2.parent)
+			for (TN parent2 = other.parent; parent2 != null; parent2 = parent2.parent)
 			{
 				otherDepth++;
 			}
 
 			// Go up to nodes of the same depth
-			N parent3 = (N)this;
-			N otherParent = other;
+			TN parent3 = (TN)this;
+			TN otherParent = other;
 			if (depth <= otherDepth)
 			{
 				for (int i = otherDepth; i > depth; i--)
@@ -1389,7 +1383,7 @@ namespace com.github.btrekkie.red_black_node
 			}
 			else
 			{
-				throw new System.ArgumentException("The nodes do not belong to the same tree");
+				throw new ArgumentException("The nodes do not belong to the same tree");
 			}
 		}
 
@@ -1397,19 +1391,19 @@ namespace com.github.btrekkie.red_black_node
 		/// Returns an integer comparing the position of this node in the tree that contains it with that of "other". Returns
 		/// a negative number if this is earlier, a positive number if this is later, and 0 if this is at the same position.
 		/// Assumes that this is in the same tree as "other". Assumes that neither "this" nor "other" is a leaf node.
-		/// 
+		///
 		/// The base class's implementation takes O(log N) time. If a RedBlackNode subclass stores a value used to order the
 		/// nodes, then it could override compareTo to compare the nodes' values, which would take O(1) time.
-		/// 
+		///
 		/// Note that while it is possible to compare the positions of two nodes in O(P) time, where P is the length of the
 		/// path from this node to "other", the default implementation of compareTo is not guaranteed to take O(P) time. If
 		/// your application requires this, then you should write your own comparison method.
 		/// </summary>
-		public virtual int CompareTo(N other)
+		public virtual int CompareTo(TN other)
 		{
-			if (Leaf || other.Leaf)
+			if (IsLeaf || other.IsLeaf)
 			{
-				throw new System.ArgumentException("One of the nodes is a leaf node");
+				throw new ArgumentException("One of the nodes is a leaf node");
 			}
 
 			// The algorithm operates as follows: compare the depth of this node to that of "other".  If the depth of
@@ -1424,13 +1418,13 @@ namespace com.github.btrekkie.red_black_node
 
 			// Compute the depth of each node
 			int depth = 0;
-			RedBlackNode<N> parent;
+			RedBlackNode<TN> parent;
 			for (parent = this; parent.parent != null; parent = parent.parent)
 			{
 				depth++;
 			}
 			int otherDepth = 0;
-			N otherParent;
+			TN otherParent;
 			for (otherParent = other; otherParent.parent != null; otherParent = otherParent.parent)
 			{
 				otherDepth++;
@@ -1493,7 +1487,7 @@ namespace com.github.btrekkie.red_black_node
 			}
 			if (parent.parent == null)
 			{
-				throw new System.ArgumentException("The nodes do not belong to the same tree");
+				throw new ArgumentException("The nodes do not belong to the same tree");
 			}
 			if (parent.parent.left == parent)
 			{
@@ -1507,7 +1501,7 @@ namespace com.github.btrekkie.red_black_node
 
 		/// <summary>
 		/// Throws a RuntimeException if the RedBlackNode fields of this are not correct for a leaf node. </summary>
-		private void assertIsValidLeaf()
+		private void AssertIsValidLeaf()
 		{
 			if (left != null || right != null || parent != null || isRed)
 			{
@@ -1522,19 +1516,19 @@ namespace com.github.btrekkie.red_black_node
 		///     the leaf node. </param>
 		/// <param name="visited"> The nodes we have reached thus far, other than leaf nodes. This method adds the non-leaf nodes in
 		///     the subtree rooted at this node to "visited". </param>
-		private void assertSubtreeIsValidRedBlack(int blackHeight, ISet<Reference<N>> visited)
+		private void AssertSubtreeIsValidRedBlack(int blackHeight, ISet<Reference<TN>> visited)
 		{
-			N nThis = (N)this;
+			TN nThis = (TN)this;
 			if (left == null || right == null)
 			{
-				assertIsValidLeaf();
+				AssertIsValidLeaf();
 				if (blackHeight != 1)
 				{
 					throw new Exception("Not all root-to-leaf paths have the same number of black nodes");
 				}
 				return;
 			}
-			else if (!visited.Add(new Reference<N>(nThis)))
+			else if (!visited.Add(new Reference<TN>(nThis)))
 			{
 				throw new Exception("The tree contains a repeated non-leaf node");
 			}
@@ -1543,7 +1537,7 @@ namespace com.github.btrekkie.red_black_node
 				int childBlackHeight;
 				if (isRed)
 				{
-					if ((!left.Leaf && left.isRed) || (!right.Leaf && right.isRed))
+					if ((!left.IsLeaf && left.isRed) || (!right.IsLeaf && right.isRed))
 					{
 						throw new Exception("A red node has a red child");
 					}
@@ -1558,32 +1552,32 @@ namespace com.github.btrekkie.red_black_node
 					childBlackHeight = blackHeight - 1;
 				}
 
-				if (!left.Leaf && left.parent != this)
+				if (!left.IsLeaf && left.parent != this)
 				{
 					throw new Exception("left.parent != this");
 				}
-				if (!right.Leaf && right.parent != this)
+				if (!right.IsLeaf && right.parent != this)
 				{
 					throw new Exception("right.parent != this");
 				}
-				RedBlackNode<N> leftNode = left;
-				RedBlackNode<N> rightNode = right;
-				leftNode.assertSubtreeIsValidRedBlack(childBlackHeight, visited);
-				rightNode.assertSubtreeIsValidRedBlack(childBlackHeight, visited);
+				RedBlackNode<TN> leftNode = left;
+				RedBlackNode<TN> rightNode = right;
+				leftNode.AssertSubtreeIsValidRedBlack(childBlackHeight, visited);
+				rightNode.AssertSubtreeIsValidRedBlack(childBlackHeight, visited);
 			}
 		}
 
 		/// <summary>
 		/// Calls assertNodeIsValid() on every node in the subtree rooted at this node. </summary>
-		private void assertNodesAreValid()
+		private void AssertNodesAreValid()
 		{
-			assertNodeIsValid();
+			AssertNodeIsValid();
 			if (left != null)
 			{
-				RedBlackNode<N> leftNode = left;
-				RedBlackNode<N> rightNode = right;
-				leftNode.assertNodesAreValid();
-				rightNode.assertNodesAreValid();
+				RedBlackNode<TN> leftNode = left;
+				RedBlackNode<TN> rightNode = right;
+				leftNode.AssertNodesAreValid();
+				rightNode.AssertNodesAreValid();
 			}
 		}
 
@@ -1592,11 +1586,11 @@ namespace com.github.btrekkie.red_black_node
 		/// has a red child or it contains a non-leaf node "node" for which node.left.parent != node. (If parent != null,
 		/// it's okay if isRed is true.) This method is useful for debugging. See also assertSubtreeIsValid().
 		/// </summary>
-		public virtual void assertSubtreeIsValidRedBlack()
+		public virtual void AssertSubtreeIsValidRedBlack()
 		{
-			if (Leaf)
+			if (IsLeaf)
 			{
-				assertIsValidLeaf();
+				AssertIsValidLeaf();
 			}
 			else
 			{
@@ -1606,12 +1600,12 @@ namespace com.github.btrekkie.red_black_node
 				}
 
 				// Compute the black height of the tree
-				ISet<Reference<N>> nodes = new HashSet<Reference<N>>();
+				ISet<Reference<TN>> nodes = new HashSet<Reference<TN>>();
 				int blackHeight = 0;
-				N node = (N)this;
+				TN node = (TN)this;
 				while (node != null)
 				{
-					if (!nodes.Add(new Reference<N>(node)))
+					if (!nodes.Add(new Reference<TN>(node)))
 					{
 						throw new Exception("The tree contains a repeated non-leaf node");
 					}
@@ -1622,7 +1616,7 @@ namespace com.github.btrekkie.red_black_node
 					node = node.left;
 				}
 
-				assertSubtreeIsValidRedBlack(blackHeight, new HashSet<Reference<N>>());
+				AssertSubtreeIsValidRedBlack(blackHeight, new HashSet<Reference<TN>>());
 			}
 		}
 
@@ -1631,10 +1625,10 @@ namespace com.github.btrekkie.red_black_node
 		/// red node or a non-leaf descendant "node" for which node.left.parent != node.  This method is useful for
 		/// debugging.  RedBlackNode subclasses may want to override assertSubtreeIsValid() to call assertOrderIsValid.
 		/// </summary>
-		public virtual void assertSubtreeIsValid()
+		public virtual void AssertSubtreeIsValid()
 		{
-			assertSubtreeIsValidRedBlack();
-			assertNodesAreValid();
+			AssertSubtreeIsValidRedBlack();
+			AssertNodesAreValid();
 		}
 
 		/// <summary>
@@ -1646,11 +1640,11 @@ namespace com.github.btrekkie.red_black_node
 		/// <param name="end"> The upper limit for nodes in the subtree, if any. </param>
 //JAVA TO C# CONVERTER TODO TASK: There is no C# equivalent to the Java 'super' constraint:
 //ORIGINAL LINE: private void assertOrderIsValid(java.util.Comparator<? super N> comparator, N start, N end)
-		private void assertOrderIsValid(IComparer<N> comparator, N start, N end)
+		private void AssertOrderIsValid(IComparer<TN> comparator, TN start, TN end)
 		{
-			if (!Leaf)
+			if (!IsLeaf)
 			{
-				N nThis = (N)this;
+				TN nThis = (TN)this;
 				if (start != null && comparator.Compare(nThis, start) < 0)
 				{
 					throw new Exception("The nodes are not ordered correctly");
@@ -1659,10 +1653,10 @@ namespace com.github.btrekkie.red_black_node
 				{
 					throw new Exception("The nodes are not ordered correctly");
 				}
-				RedBlackNode<N> leftNode = left;
-				RedBlackNode<N> rightNode = right;
-				leftNode.assertOrderIsValid(comparator, start, nThis);
-				rightNode.assertOrderIsValid(comparator, nThis, end);
+				RedBlackNode<TN> leftNode = left;
+				RedBlackNode<TN> rightNode = right;
+				leftNode.AssertOrderIsValid(comparator, start, nThis);
+				rightNode.AssertOrderIsValid(comparator, nThis, end);
 			}
 		}
 
@@ -1675,13 +1669,13 @@ namespace com.github.btrekkie.red_black_node
 		///     natural order, as in N.compareTo. </param>
 //JAVA TO C# CONVERTER TODO TASK: There is no C# equivalent to the Java 'super' constraint:
 //ORIGINAL LINE: public void assertOrderIsValid(java.util.Comparator<? super N> comparator)
-		public virtual void assertOrderIsValid(IComparer<N> comparator)
+		public virtual void AssertOrderIsValid(IComparer<TN> comparator)
 		{
 			if (comparator == null)
 			{
-				comparator = naturalOrder();
+				comparator = NaturalOrder();
 			}
-			assertOrderIsValid(comparator, null, null);
+			AssertOrderIsValid(comparator, null, null);
 		}
 	}
 

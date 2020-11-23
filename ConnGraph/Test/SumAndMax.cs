@@ -8,11 +8,11 @@ namespace Connectivity.test
 	{
 		/// <summary>
 		/// An Augmentation that combines two SumAndMaxes into one. </summary>
-		public static readonly Augmentation AUGMENTATION = new AugmentationAnonymousInnerClass();
+		public static readonly IAugmentation augmentation = new AugmentationAnonymousInnerClass();
 
-		private class AugmentationAnonymousInnerClass : Augmentation
+		private class AugmentationAnonymousInnerClass : IAugmentation
 		{
-			public object combine(object value1, object value2)
+			public object Combine(object value1, object value2)
 			{
 				SumAndMax sumAndMax1 = (SumAndMax)value1;
 				SumAndMax sumAndMax2 = (SumAndMax)value2;

@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace com.github.btrekkie.red_black_node
+namespace Connectivity.RedBlack
 {
 	internal interface IReference
 	{
