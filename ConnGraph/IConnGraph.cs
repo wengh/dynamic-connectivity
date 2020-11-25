@@ -58,16 +58,16 @@ namespace Connectivity
         ComponentInfo GetComponentInfo(ConnVertex vertex);
 
         /// <summary>
-        /// O(1)
-        /// </summary>
-        /// <returns>The number of connected components in the graph</returns>
-        int GetNumberOfComponents();
-
-        /// <summary>
         /// O(C) where C is the number of components
         /// </summary>
         /// <returns>All components in the graph</returns>
         ICollection<ComponentInfo> GetAllComponents();
+
+        /// <summary>
+        /// O(1)
+        /// </summary>
+        /// <returns>The number of connected components in the graph</returns>
+        int GetNumberOfComponents();
 
         /// <summary>
         /// Returns whether the specified vertex has any associated augmentation. At present, this method takes constant
