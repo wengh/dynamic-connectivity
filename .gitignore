@@ -2,3 +2,5 @@
 packages/
 ConnGraph/bin/
 ConnGraph/obj/
+.dccache
+ConnGraph.sln.DotSettings.user
