@@ -1,4 +1,6 @@
-﻿using Connectivity.RedBlack;
+﻿using System.Collections.Generic;
+using System.Threading;
+using Connectivity.RedBlack;
 
 namespace Connectivity
 {
@@ -8,6 +10,8 @@ namespace Connectivity
 	/// </summary>
 	internal class EulerTourNode : RedBlackNode<EulerTourNode>
 	{
+		private static long _iteration = 0;
+
 		/// <summary>
 		/// The dummy leaf node. </summary>
 		public static readonly EulerTourNode leaf = new EulerTourNode(null, null);
@@ -19,6 +23,10 @@ namespace Connectivity
 		/// <summary>
 		/// The number of nodes in the subtree rooted at this node. </summary>
 		public int size;
+
+		/// <summary>
+		/// The number of ConnVertex in the subtree rooted at this node. </summary>
+		public int ConnGraphSize => (size + 1) >> 1;
 
 		/// <summary>
 		/// Whether the subtree rooted at this node contains a node "node" for which
@@ -52,10 +60,13 @@ namespace Connectivity
 		/// </summary>
 		public bool hasAugmentation;
 
+		private long _id;
+
 		public EulerTourNode(EulerTourVertex vertex, IAugmentation augmentationFunc)
 		{
 			this.vertex = vertex;
 			this.augmentationFunc = augmentationFunc;
+			_id = Interlocked.Increment(ref _iteration);
 		}
 
 		/// <summary>
@@ -128,6 +139,18 @@ namespace Connectivity
 				return true;
 			}
 		}
-	}
 
+		public static readonly Comparer<EulerTourNode> safeComparer = new SafeComparer();
+
+		private class SafeComparer : Comparer<EulerTourNode>
+		{
+			public override int Compare(EulerTourNode x, EulerTourNode y)
+			{
+				if (x != null && y != null) return x._id.CompareTo(y._id);
+				if (x == null && y == null) return 0;
+				if (x == null) return -1;
+				return 1;
+			}
+		}
+	}
 }

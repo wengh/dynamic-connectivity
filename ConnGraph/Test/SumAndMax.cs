@@ -12,10 +12,10 @@ namespace Connectivity.test
 
 		private class AugmentationAnonymousInnerClass : IAugmentation
 		{
-			public object Combine(object value1, object value2)
+			public object Combine(object parent, object child)
 			{
-				SumAndMax sumAndMax1 = (SumAndMax)value1;
-				SumAndMax sumAndMax2 = (SumAndMax)value2;
+				SumAndMax sumAndMax1 = (SumAndMax)parent;
+				SumAndMax sumAndMax2 = (SumAndMax)child;
 				return new SumAndMax(sumAndMax1.sum + sumAndMax2.sum, Math.Max(sumAndMax1.max, sumAndMax2.max));
 			}
 		}

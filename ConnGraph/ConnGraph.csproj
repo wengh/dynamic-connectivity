@@ -56,14 +56,15 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Augmentation.cs" />
+        <Compile Include="ComponentInfo.cs" />
         <Compile Include="ConnEdge.cs" />
         <Compile Include="ConnGraph.cs" />
+        <Compile Include="ConnGraphComponentStorage.cs" />
         <Compile Include="ConnVertex.cs" />
         <Compile Include="EulerTourEdge.cs" />
         <Compile Include="EulerTourNode.cs" />
         <Compile Include="EulerTourVertex.cs" />
         <Compile Include="IConnGraph.cs" />
-        <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="RedBlack\RedBlackNode.cs" />
         <Compile Include="RedBlack\Reference.cs" />

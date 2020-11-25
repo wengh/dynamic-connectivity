@@ -424,8 +424,7 @@ namespace Connectivity.RedBlack
 		/// Returns a Comparator that compares instances of N using their natural order, as in N.compareTo. </summary>
 		private IComparer<TN> NaturalOrder()
 		{
-			System.Collections.IComparer comparator = (System.Collections.IComparer)_naturalOrder;
-			return (IComparer<TN>)comparator;
+			return (IComparer<TN>)_naturalOrder;
 		}
 
 		/// <summary>

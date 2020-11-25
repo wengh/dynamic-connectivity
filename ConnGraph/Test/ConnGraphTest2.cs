@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,15 +27,49 @@ namespace Connectivity.test
 		    _log = log;
 	    }
 
+	    [Theory]
+	    [InlineData(1000, 1000)]
+	    public void TestDictionary(int capacity, int count)
+	    {
+		    var sw = new PerformanceMeasurement();
+		    var rand = new Random();
+		    var dict = new Dictionary<int, int>(capacity);
+		    for (int i = 0; i < count; i++)
+		    {
+			    dict[rand.Next()] = i;
+		    }
+
+		    int hash = 0;
+		    var enumerator = dict.GetEnumerator();
+		    while (true)
+		    {
+			    sw.Start();
+			    bool good = enumerator.MoveNext();
+			    sw.Stop();
+
+			    if (!good)
+				    break;
+
+			    var pair = enumerator.Current;
+			    hash = hash * 31 + pair.Key;
+			    hash = hash * 31 + pair.Value;
+
+		    }
+		    _log.WriteLine(hash.ToString());
+		    _log.WriteLine(sw.ToString());
+	    }
+
 		[Theory]
-		// [InlineData(100000, 300000, 100000, 100000, 11439)]
-		// [InlineData(1000, 3000, 1000, 1000, 159475)]
-		// [InlineData(10000, 300000, 100000, 100000, 1184)]
-		[InlineData(10000, 30000, 1000, 10000, 11439, true)]
-		// [InlineData(100000, 300000, 100000, 100000, 0)]
-		// [InlineData(1000, 3000, 1000, 1000, 0)]
-		// [InlineData(10000, 300000, 100000, 100000, 0)]
-		public void TestBenchmark(int nV, int nE, int nQ, int nO, int seed, bool naive = false)
+		// [InlineData(100000, 300000, 100000, 100000, 11439, 1)]
+		// [InlineData(100000, 1000000, 100000, 100000, 984516, 2)]
+		// [InlineData(1000, 3000, 1000, 1000, 159475, 2)]
+		// [InlineData(10000, 300000, 100000, 100000, 1184, 2)]
+		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 2)]
+		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 1)]
+		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 0)]
+		// [InlineData(100, 10000, 1000, 10000, 12580, false)]
+		// [InlineData(100, 10000, 1000, 10000, 12580, true)]
+		public void TestBenchmark(int nV, int nE, int nQ, int nO, int seed, int queryType = 0, bool naive = false, int type = 1)
 		{
 			if (seed == 0)
 			{
@@ -59,7 +94,7 @@ namespace Connectivity.test
 			if (naive)
 				graph = new NaiveConnGraph(SumAndMax.AUGMENTATION);
 			else
-				graph = new ConnGraph(SumAndMax.AUGMENTATION);
+				graph = new ConnGraph(SumAndMax.AUGMENTATION, (ConnGraphComponentStorageType) type);
 			swA.Stop();
 
 			var V = new ConnVertex[nV];
@@ -108,7 +143,18 @@ namespace Connectivity.test
 						DeleteRandomEdge();
 						break;
 					case 'q':
-						QueryRandom();
+						switch (queryType)
+						{
+							case 0:
+								Query0();
+								break;
+							case 1:
+								Query1();
+								break;
+							case 2:
+								Query2();
+								break;
+						}
 						break;
 				}
 			}
@@ -154,18 +200,7 @@ namespace Connectivity.test
 				swD.Stop();
 			}
 
-			void QueryRandom()
-			{
-				int a1 = rand.Next(0, nV);
-
-				swQ.Start();
-				var result = (SumAndMax) graph.GetComponentAugmentation(V[a1]);
-				swQ.Stop();
-
-				hash = hash + result.sum;
-			}
-
-			void QueryRandom1()
+			void Query0()
 			{
 				int a1 = rand.Next(1, nV);
 				int b1 = rand.Next(0, a1);
@@ -174,6 +209,31 @@ namespace Connectivity.test
 				swQ.Stop();
 
 				hash = hash * 31 + (result ? 402653189 : 786433);
+			}
+
+			void Query1()
+			{
+				int a1 = rand.Next(0, nV);
+
+				swQ.Start();
+				var info = graph.GetComponentInfo(V[a1]);
+				swQ.Stop();
+				int result = ((SumAndMax) info.augmentation).sum;
+				Assert.True(info.size == result);
+
+				hash = hash * 31 + result;
+			}
+
+			void Query2()
+			{
+				swQ.Start();
+				var components = graph.GetAllComponents();
+				swQ.Stop();
+				foreach (var component in components.OrderBy(x => x.size))
+				{
+					// hash += component.size;
+					hash = hash * 31 + component.size;
+				}
 			}
 		}
 

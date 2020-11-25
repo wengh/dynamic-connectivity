@@ -124,7 +124,12 @@ namespace Connectivity
 		/// expected time and O(log N / log log N) time with high probability, because vertexInfo is a HashMap, and
 		/// ConnVertex.hashCode() returns a random integer.
 		/// </summary>
-		private IDictionary<ConnVertex, VertexInfo> _vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+		private Dictionary<ConnVertex, VertexInfo> _vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+
+		/// <summary>
+		/// All connected components in te graph. We link each root node to an arbitrary vertex in the component.
+		/// </summary>
+		private ConnGraphComponentStorage _components;
 
 		/// <summary>
 		/// Ceiling of log base 2 of the maximum number of vertices in this graph since the last rebuild. This is 0 if that
@@ -140,17 +145,22 @@ namespace Connectivity
 		private int _maxVertexInfoSize;
 
 		/// <summary>
-		/// Constructs a new ConnGraph with no augmentation. </summary>
-		public ConnGraph()
-		{
-			_augmentation = null;
-		}
-
-		/// <summary>
 		/// Constructs an augmented ConnGraph, using the specified function to combine augmentation values. </summary>
-		public ConnGraph(IAugmentation augmentation)
+		public ConnGraph(IAugmentation augmentation = null, ConnGraphComponentStorageType storageType = ConnGraphComponentStorageType.Dictionary)
 		{
 			_augmentation = augmentation;
+			switch (storageType)
+			{
+				case ConnGraphComponentStorageType.None:
+					_components = new ConnGraphComponentStorageNone();
+					break;
+				case ConnGraphComponentStorageType.Dictionary:
+					_components = new ConnGraphComponentStorageIDictionary(new Dictionary<EulerTourNode, ConnVertex>());
+					break;
+				case ConnGraphComponentStorageType.SortedDictionary:
+					_components = new ConnGraphComponentStorageIDictionary(new SortedDictionary<EulerTourNode, ConnVertex>(EulerTourNode.safeComparer));
+					break;
+			}
 		}
 
 		/// <summary>
@@ -194,6 +204,7 @@ namespace Connectivity
 				_maxLogVertexCountSinceRebuild++;
 			}
 			_maxVertexInfoSize = Math.Max(_maxVertexInfoSize, _vertexInfo.Count);
+			_components.Add(node, vertex);
 			return info;
 		}
 
@@ -277,7 +288,7 @@ namespace Connectivity
 
 		/// <summary>
 		/// Equivalent implementation is contractual.
-		/// 
+		///
 		/// This method is useful for when an EulerTourVertex's lists (graphListHead or forestListHead) or arbitrary visit
 		/// change, as these affect the hasGraphEdge and hasForestEdge augmentations.
 		/// </summary>
@@ -643,8 +654,21 @@ namespace Connectivity
 		/// Adds an edge between the specified vertices, if such an edge is not already present. Taken together with
 		/// removeEdge, this method takes O(log^2 N) amortized time with high probability. </summary>
 		/// <returns> Whether there was no edge between the vertices. </returns>
-		public virtual bool AddEdge(ConnVertex connVertex1, ConnVertex connVertex2)
+		public bool AddEdge(ConnVertex connVertex1, ConnVertex connVertex2)
 		{
+			return AddEdge(connVertex1, connVertex2, out _);
+		}
+
+		/// <summary>
+		/// Adds an edge between the specified vertices, if such an edge is not already present. Taken together with
+		/// removeEdge, this method takes O(log^2 N) amortized time with high probability. </summary>
+		/// <returns> Whether there was no edge between the vertices. </returns>
+		/// <param name="connVertex1"></param>
+		/// <param name="connVertex2"></param>
+		/// <param name="isBridge">Whether the new edge joined two previously separate components</param>
+		public virtual bool AddEdge(ConnVertex connVertex1, ConnVertex connVertex2, out bool isBridge)
+		{
+			isBridge = false;
 			if (connVertex1 == connVertex2)
 			{
 				throw new ArgumentException("Self-loops are not allowed");
@@ -664,14 +688,20 @@ namespace Connectivity
 			EulerTourVertex vertex2 = info2.vertex;
 			ConnEdge edge = new ConnEdge(vertex1, vertex2);
 
-			if (vertex1.arbitraryVisit.Root() == vertex2.arbitraryVisit.Root())
+			var root1 = vertex1.arbitraryVisit.Root();
+			var root2 = vertex2.arbitraryVisit.Root();
+			if (root1 == root2)
 			{
 				AddToGraphLinkedLists(edge);
 			}
 			else
 			{
+				isBridge = true;
+				_components.Remove(root1);
+				_components.Remove(root2);
 				AddToForestLinkedLists(edge);
 				edge.eulerTourEdge = AddForestEdge(vertex1, vertex2);
+				_components.Add(vertex1, connVertex1);
 			}
 			AugmentAncestorFlags(vertex1.arbitraryVisit);
 			AugmentAncestorFlags(vertex2.arbitraryVisit);
@@ -966,16 +996,31 @@ namespace Connectivity
 		/// <summary>
 		/// Removes the edge between the specified vertices, if there is such an edge. Taken together with addEdge, this
 		/// method takes O(log^2 N) amortized time with high probability. </summary>
-		/// <returns> Whether there was an edge between the vertices. </returns>
-		public virtual bool RemoveEdge(ConnVertex vertex1, ConnVertex vertex2)
+		public bool RemoveEdge(ConnVertex vertex1, ConnVertex vertex2)
 		{
+			return RemoveEdge(vertex1, vertex2, out _);
+		}
+
+		/// <summary>
+		/// Removes the edge between the specified vertices, if there is such an edge. Taken together with addEdge, this
+		/// method takes O(log^2 N) amortized time with high probability. </summary>
+		/// <returns> Whether there was an edge between the vertices. </returns>
+		/// <param name="vertex1"></param>
+		/// <param name="vertex2"></param>
+		/// <param name="isBridge">Whether the removal of the edge separated two components</param>
+		public virtual bool RemoveEdge(ConnVertex vertex1, ConnVertex vertex2, out bool isBridge)
+		{
+			isBridge = false;
+
 			if (vertex1 == vertex2)
 			{
 				throw new ArgumentException("Self-loops are not allowed");
 			}
 
 			if (!_vertexInfo.TryGetValue(vertex1, out var info1))
+			{
 				return false;
+			}
 
 			ConnEdge edge = RemoveFromEdgeMap(info1, vertex2);
 			if (edge == null)
@@ -991,6 +1036,8 @@ namespace Connectivity
 
 			if (edge.eulerTourEdge != null)
 			{
+				_components.Remove(info1.vertex);
+
 				for (EulerTourEdge levelEdge = edge.eulerTourEdge; levelEdge != null; levelEdge = levelEdge.higherEdge)
 				{
 					RemoveForestEdge(levelEdge);
@@ -1068,17 +1115,24 @@ namespace Connectivity
 						replacementVertex1 = replacementVertex1.higherVertex;
 						replacementVertex2 = replacementVertex2.higherVertex;
 					}
+					_components.Add(info1.vertex, vertex1);
+				}
+				else
+				{
+					isBridge = true;
+
+					if (info1.edges.Count == 0 && !info1.vertex.hasAugmentation)
+						Remove(vertex1);
+					else
+						_components.Add(info1.vertex, vertex1);
+
+					if (info2.edges.Count == 0 && !info2.vertex.hasAugmentation)
+						Remove(vertex2);
+					else
+						_components.Add(info2.vertex, vertex2);
 				}
 			}
 
-			if (info1.edges.Count == 0 && !info1.vertex.hasAugmentation)
-			{
-				Remove(vertex1);
-			}
-			if (info2.edges.Count == 0 && !info2.vertex.hasAugmentation)
-			{
-				Remove(vertex2);
-			}
 			return true;
 		}
 
@@ -1119,7 +1173,7 @@ namespace Connectivity
 		/// <summary>
 		/// Sets the augmentation associated with the specified vertex. This method takes O(log N) time with high
 		/// probability.
-		/// 
+		///
 		/// Note that passing a null value for the second argument is not the same as removing the augmentation. For that,
 		/// you need to call removeVertexAugmentation.
 		/// </summary>
@@ -1164,6 +1218,7 @@ namespace Connectivity
 			if (info.edges.Count == 0)
 			{
 				Remove(connVertex);
+				_components.Remove(vertex);
 			}
 			else if (vertex.hasAugmentation)
 			{
@@ -1198,21 +1253,40 @@ namespace Connectivity
 		}
 
 		/// <summary>
-		/// Returns the result of combining the augmentations associated with all of the vertices in the connected component
-		/// containing the specified vertex. Returns null if none of those vertices has any associated augmentation. This
-		/// method takes O(log N) time with high probability.
+		/// Returns the information about the connected component that includes the vertex.
+		/// Returns an empty component if the vertex is not in the graph.
+		/// This method takes O(log N) time with high probability.
 		/// </summary>
-		public virtual object GetComponentAugmentation(ConnVertex vertex)
+		public virtual ComponentInfo GetComponentInfo(ConnVertex vertex)
 		{
 			AssertIsAugmented();
 			if (_vertexInfo.TryGetValue(vertex, out var info))
 			{
-				return info.vertex.arbitraryVisit.Root().augmentation;
+				var root = info.vertex.arbitraryVisit.Root();
+				return new ComponentInfo(vertex, root.augmentation, root.ConnGraphSize);
 			}
 			else
 			{
-				return null;
+				return new ComponentInfo();
 			}
+		}
+
+		/// <summary>
+		/// O(C) where C is the number of components
+		/// </summary>
+		/// <returns>All components in the graph</returns>
+		public virtual ICollection<ComponentInfo> GetAllComponents()
+		{
+			return _components.GetComponents();
+		}
+
+		/// <summary>
+		/// O(1)
+		/// </summary>
+		/// <returns>The number of connected components in the graph</returns>
+		public virtual int GetNumberOfComponents()
+		{
+			return _components.GetCount();
 		}
 
 		/// <summary>

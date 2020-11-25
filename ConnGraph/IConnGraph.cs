@@ -51,11 +51,23 @@ namespace Connectivity
         object GetVertexAugmentation(ConnVertex vertex);
 
         /// <summary>
-        /// Returns the result of combining the augmentations associated with all of the vertices in the connected component
-        /// containing the specified vertex. Returns null if none of those vertices has any associated augmentation. This
-        /// method takes O(log N) time with high probability.
+        /// Returns the information about the connected component that includes the vertex.
+        /// Returns an empty component if the vertex is not in the graph.
+        /// This method takes O(log N) time with high probability.
         /// </summary>
-        object GetComponentAugmentation(ConnVertex vertex);
+        ComponentInfo GetComponentInfo(ConnVertex vertex);
+
+        /// <summary>
+        /// O(1)
+        /// </summary>
+        /// <returns>The number of connected components in the graph</returns>
+        int GetNumberOfComponents();
+
+        /// <summary>
+        /// O(C) where C is the number of components
+        /// </summary>
+        /// <returns>All components in the graph</returns>
+        ICollection<ComponentInfo> GetAllComponents();
 
         /// <summary>
         /// Returns whether the specified vertex has any associated augmentation. At present, this method takes constant
@@ -82,5 +94,18 @@ namespace Connectivity
         /// ConnGraph uses, but not beyond the bound of O(V log V + E).
         /// </summary>
         void Optimize();
+    }
+
+    public static class ConnGraphExtensions
+    {
+        public static object GetComponentAugmentation(this IConnGraph graph, ConnVertex vertex)
+        {
+            return graph.GetComponentInfo(vertex).augmentation;
+        }
+
+        public static object GetComponentSize(this IConnGraph graph, ConnVertex vertex)
+        {
+            return graph.GetComponentInfo(vertex).size;
+        }
     }
 }

@@ -36,7 +36,7 @@
 		/// prior call to ConnGraph.setVertexAugmentation(vertex, null), or that the "combine" method previously returned
 		/// null.
 		/// </summary>
-		object Combine(object value1, object value2);
+		object Combine(object parent, object child);
 	}
 
 }

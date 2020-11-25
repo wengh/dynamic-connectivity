@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 
 namespace Connectivity.test
 {
@@ -151,13 +150,14 @@ namespace Connectivity.test
             return info.aug;
         }
 
-        public object GetComponentAugmentation(ConnVertex vertex)
+        public ComponentInfo GetComponentInfo(ConnVertex vertex)
         {
             long iteration = ++_iteration;
 
             var info = EnsureInfo(vertex);
             info.iteration = iteration;
 
+            int size = 1;
             var queue = new Queue<VertexInfo>(new[] {info});
             object aug = info.aug;
             while (queue.Count > 0)
@@ -168,12 +168,80 @@ namespace Connectivity.test
                     if (next.iteration == iteration)
                         continue;
 
+                    size++;
                     aug = _augmentation.Combine(aug, info.aug);
                     next.iteration = iteration;
                     queue.Enqueue(next);
                 }
             }
-            return aug;
+            return new ComponentInfo(vertex, aug, size);
+        }
+
+        public int GetNumberOfComponents()
+        {
+            int numberOfComponents = 0;
+            long iteration = ++_iteration;
+
+            var queue = new Queue<VertexInfo>();
+            foreach (var pair in _info)
+            {
+                var info = pair.Value;
+                if (info.iteration == iteration)
+                    continue;
+
+                numberOfComponents++;
+                queue.Enqueue(info);
+                while (queue.Count > 0)
+                {
+                    var vert = queue.Dequeue();
+                    foreach (var next in vert.edges)
+                    {
+                        if (next.iteration == iteration)
+                            continue;
+
+                        next.iteration = iteration;
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return numberOfComponents;
+        }
+
+        public ICollection<ComponentInfo> GetAllComponents()
+        {
+            var list = new List<ComponentInfo>();
+            long iteration = ++_iteration;
+
+            var queue = new Queue<VertexInfo>();
+            foreach (var pair in _info)
+            {
+                var info = pair.Value;
+                if (info.iteration == iteration)
+                    continue;
+
+                int size = 1;
+                var aug = info.aug;
+                info.iteration = iteration;
+                queue.Enqueue(info);
+                while (queue.Count > 0)
+                {
+                    var vert = queue.Dequeue();
+                    foreach (var next in vert.edges)
+                    {
+                        if (next.iteration == iteration)
+                            continue;
+
+                        size++;
+                        aug = _augmentation.Combine(aug, next.aug);
+                        next.iteration = iteration;
+                        queue.Enqueue(next);
+                    }
+                }
+                list.Add(new ComponentInfo(pair.Key, aug, size));
+            }
+
+            return list;
         }
 
         public bool VertexHasAugmentation(ConnVertex vertex)
@@ -184,7 +252,7 @@ namespace Connectivity.test
 
         public bool ComponentHasAugmentation(ConnVertex vertex)
         {
-            return GetComponentAugmentation(vertex) != null;
+            return this.GetComponentAugmentation(vertex) != null;
         }
 
         public void Clear()
