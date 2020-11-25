@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Connectivity
 {
+	using Map = Dictionary<ConnVertex, VertexInfo>;
 
 	/// <summary>
 	/// Implements an undirected graph with dynamic connectivity. It supports adding and removing edges and determining
@@ -124,12 +125,12 @@ namespace Connectivity
 		/// expected time and O(log N / log log N) time with high probability, because vertexInfo is a HashMap, and
 		/// ConnVertex.hashCode() returns a random integer.
 		/// </summary>
-		private Dictionary<ConnVertex, VertexInfo> _vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+		private Map _vertexInfo = new Map();
 
 		/// <summary>
 		/// All connected components in te graph. We link each root node to an arbitrary vertex in the component.
 		/// </summary>
-		private ConnGraphComponentStorage _components;
+		private IConnGraphComponentStorage _components;
 
 		/// <summary>
 		/// Ceiling of log base 2 of the maximum number of vertices in this graph since the last rebuild. This is 0 if that
@@ -155,10 +156,7 @@ namespace Connectivity
 					_components = new ConnGraphComponentStorageNone();
 					break;
 				case ConnGraphComponentStorageType.Dictionary:
-					_components = new ConnGraphComponentStorageIDictionary(new Dictionary<EulerTourNode, ConnVertex>());
-					break;
-				case ConnGraphComponentStorageType.SortedDictionary:
-					_components = new ConnGraphComponentStorageIDictionary(new SortedDictionary<EulerTourNode, ConnVertex>(EulerTourNode.safeComparer));
+					_components = new ConnGraphComponentStorageDictionary();
 					break;
 			}
 		}
@@ -221,7 +219,7 @@ namespace Connectivity
 				// The capacity of a HashMap is not automatically reduced as the number of entries decreases. To avoid
 				// violating our O(V log V + E) space guarantee, we copy vertexInfo to a new HashMap, which will have a
 				// suitable capacity.
-				_vertexInfo = new Dictionary<ConnVertex, VertexInfo>(_vertexInfo);
+				_vertexInfo = new Map(_vertexInfo);
 				_maxVertexInfoSize = _vertexInfo.Count;
 			}
 			if (_vertexInfo.Count << RebuildChange <= 1 << _maxLogVertexCountSinceRebuild)
@@ -702,6 +700,7 @@ namespace Connectivity
 				AddToForestLinkedLists(edge);
 				edge.eulerTourEdge = AddForestEdge(vertex1, vertex2);
 				_components.Add(vertex1, connVertex1);
+				_components.PossiblyShrink();
 			}
 			AugmentAncestorFlags(vertex1.arbitraryVisit);
 			AugmentAncestorFlags(vertex2.arbitraryVisit);
@@ -979,14 +978,7 @@ namespace Connectivity
 			if (srcInfo.edges.TryGetValue(destVertex, out var edge))
 			{
 				srcInfo.edges.Remove(destVertex);
-				if (4 * srcInfo.edges.Count <= srcInfo.maxEdgeCountSinceRebuild && srcInfo.maxEdgeCountSinceRebuild > 6)
-				{
-					// The capacity of a HashMap is not automatically reduced as the number of entries decreases. To avoid
-					// violating our O(V log V + E) space guarantee, we copy srcInfo.edges to a new HashMap, which will have a
-					// suitable capacity.
-					srcInfo.edges = new Dictionary<ConnVertex, ConnEdge>(srcInfo.edges);
-					srcInfo.maxEdgeCountSinceRebuild = srcInfo.edges.Count;
-				}
+				srcInfo.PossiblyShrink();
 				return edge;
 			}
 
@@ -1219,6 +1211,7 @@ namespace Connectivity
 			{
 				Remove(connVertex);
 				_components.Remove(vertex);
+				_components.PossiblyShrink();
 			}
 			else if (vertex.hasAugmentation)
 			{
@@ -1330,7 +1323,7 @@ namespace Connectivity
 		{
 			// Note that we construct a new HashMap rather than calling vertexInfo.clear() in order to ensure a reduction in
 			// space
-			_vertexInfo = new Dictionary<ConnVertex, VertexInfo>();
+			_vertexInfo = new Map();
 			_maxLogVertexCountSinceRebuild = 0;
 			_maxVertexInfoSize = 0;
 		}
@@ -1518,6 +1511,7 @@ namespace Connectivity
 			Rebuild();
 			OptimizeForestEdges();
 			OptimizeGraphEdges();
+			_components.PossiblyShrink();
 		}
 	}
 

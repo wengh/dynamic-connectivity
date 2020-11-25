@@ -7,89 +7,89 @@ namespace Connectivity
     {
         /// <summary>
         /// Do not cache components of the graph.
-        /// No extra time for update but GetAllComponents() not implemented
+        /// No extra time for update but GetAllComponents() is not implemented
         /// </summary>
         None = 0,
 
         /// <summary>
         /// Cache components using a Dictionary.
-        /// O(1) extra time for update, O(N) GetAllComponents()
+        /// O(1) extra time for update with high probability, O(C) GetAllComponents() where C is the number of components.
+        /// O(C) extra space.
         /// </summary>
         Dictionary = 1,
-
-        /// <summary>
-        /// Cache components using a SortedDictionary.
-        /// O(log N) extra time for update, O(C) GetAllComponents where C is the number of components
-        /// </summary>
-        SortedDictionary = 2,
     }
 
-    internal abstract class ConnGraphComponentStorage
+    internal interface IConnGraphComponentStorage
     {
-        public abstract void Add(EulerTourNode root, ConnVertex vertex);
-        public abstract void Add(EulerTourVertex eulerVertex, ConnVertex vertex);
-        public abstract void Remove(EulerTourNode root);
-        public abstract void Remove(EulerTourVertex eulerVertex);
-        public abstract int GetCount();
-        public abstract ICollection<ComponentInfo> GetComponents();
+        void Add(EulerTourNode root, ConnVertex vertex);
+        void Add(EulerTourVertex eulerVertex, ConnVertex vertex);
+        void Remove(EulerTourNode root);
+        void Remove(EulerTourVertex eulerVertex);
+        int GetCount();
+        void PossiblyShrink();
+        ICollection<ComponentInfo> GetComponents();
     }
 
-    internal class ConnGraphComponentStorageNone : ConnGraphComponentStorage
+    internal class ConnGraphComponentStorageNone : IConnGraphComponentStorage
     {
         private int _count;
 
-        public override void Add(EulerTourNode root, ConnVertex vertex)
+        public void Add(EulerTourNode root, ConnVertex vertex)
         {
             _count++;
         }
 
-        public override void Add(EulerTourVertex eulerVertex, ConnVertex vertex)
+        public void Add(EulerTourVertex eulerVertex, ConnVertex vertex)
         {
             _count++;
         }
 
-        public override void Remove(EulerTourNode root)
+        public void Remove(EulerTourNode root)
         {
             _count--;
         }
 
-        public override void Remove(EulerTourVertex eulerVertex)
+        public void Remove(EulerTourVertex eulerVertex)
         {
             _count--;
         }
 
-        public override int GetCount()
+        public int GetCount()
         {
             return _count;
         }
 
-        public override ICollection<ComponentInfo> GetComponents()
+        public void PossiblyShrink()
+        {
+        }
+
+        public ICollection<ComponentInfo> GetComponents()
         {
             throw new System.NotImplementedException();
         }
     }
 
-    internal class ConnGraphComponentStorageIDictionary : ConnGraphComponentStorage
+    internal abstract class ConnGraphComponentStorageIDictionary<T>
+        : IConnGraphComponentStorage where T : IDictionary<EulerTourNode, ConnVertex>
     {
-        private IDictionary<EulerTourNode, ConnVertex> _dict;
+        protected T _dict;
 
-        public ConnGraphComponentStorageIDictionary(IDictionary<EulerTourNode, ConnVertex> dict)
+        protected ConnGraphComponentStorageIDictionary(T dict)
         {
             _dict = dict;
-            var st = new SortedDictionary<object, object>();
         }
 
-        public override void Add(EulerTourNode root, ConnVertex vertex)
+        public virtual void Add(EulerTourNode root, ConnVertex vertex)
         {
             _dict.Add(root, vertex);
         }
 
-        public override void Add(EulerTourVertex eulerVertex, ConnVertex vertex)
+        public void Add(EulerTourVertex eulerVertex, ConnVertex vertex)
         {
-            _dict.Add(eulerVertex.arbitraryVisit.Root(), vertex);
+            Add(eulerVertex.arbitraryVisit.Root(), vertex);
         }
 
-        public override void Remove(EulerTourNode root)
+        public virtual void Remove(EulerTourNode root)
         {
             if (!_dict.Remove(root))
             {
@@ -97,20 +97,21 @@ namespace Connectivity
             }
         }
 
-        public override void Remove(EulerTourVertex eulerVertex)
+        public void Remove(EulerTourVertex eulerVertex)
         {
-            if (!_dict.Remove(eulerVertex.arbitraryVisit.Root()))
-            {
-                throw new ArgumentException();
-            }
+            Remove(eulerVertex.arbitraryVisit.Root());
         }
 
-        public override int GetCount()
+        public int GetCount()
         {
             return _dict.Count;
         }
 
-        public override ICollection<ComponentInfo> GetComponents()
+        public virtual void PossiblyShrink()
+        {
+        }
+
+        public ICollection<ComponentInfo> GetComponents()
         {
             var infos = new List<ComponentInfo>(GetCount());
             foreach (var pair in _dict)
@@ -118,6 +119,38 @@ namespace Connectivity
                 infos.Add(new ComponentInfo(pair.Value, pair.Key.augmentation, pair.Key.ConnGraphSize));
             }
             return infos;
+        }
+    }
+
+    internal class ConnGraphComponentStorageDictionary : ConnGraphComponentStorageIDictionary<Dictionary<EulerTourNode, ConnVertex>>
+    {
+        protected const int initialCapacity = 32;
+        protected int _capacity = initialCapacity;
+
+        public ConnGraphComponentStorageDictionary() : base(new Dictionary<EulerTourNode, ConnVertex>(initialCapacity))
+        {
+        }
+
+        public override void Add(EulerTourNode root, ConnVertex vertex)
+        {
+            base.Add(root, vertex);
+            _capacity = Math.Max(_capacity, _dict.Count);
+        }
+
+        public override void PossiblyShrink()
+        {
+            int count = _dict.Count;
+            if (count * 4 < _capacity && _capacity > initialCapacity * 2)
+            {
+                // resize the dictionary
+                var oldDict = _dict;
+                _capacity = Math.Max(count * 2, initialCapacity);
+                _dict = new Dictionary<EulerTourNode, ConnVertex>(_capacity);
+                foreach (var pair in oldDict)
+                {
+                    _dict.Add(pair.Key, pair.Value);
+                }
+            }
         }
     }
 }

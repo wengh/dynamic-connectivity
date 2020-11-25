@@ -2,6 +2,7 @@
 
 namespace Connectivity
 {
+	using Map = Dictionary<ConnVertex, ConnEdge>;
 
 	/// <summary>
 	/// Describes a ConnVertex, with respect to a particular ConnGraph. There is exactly one VertexInfo object per vertex in
@@ -18,7 +19,7 @@ namespace Connectivity
 		/// vertex. Lookups take O(1) expected time and O(log N / log log N) time with high probability, because "edges" is a
 		/// HashMap, and ConnVertex.hashCode() returns a random integer.
 		/// </summary>
-		public IDictionary<ConnVertex, ConnEdge> edges = new Dictionary<ConnVertex, ConnEdge>();
+		public Map edges = new Map();
 
 		/// <summary>
 		/// The maximum number of entries in "edges" since the last time we "rebuilt" that field. When the number of edges
@@ -31,6 +32,20 @@ namespace Connectivity
 		public VertexInfo(EulerTourVertex vertex)
 		{
 			this.vertex = vertex;
+		}
+
+		/// <summary>
+		/// The capacity of a HashMap is not automatically reduced as the number of entries decreases. To avoid
+		/// violating our O(V log V + E) space guarantee, we copy edges to a new HashMap, which will have a
+		/// suitable capacity.
+		/// </summary>
+		public void PossiblyShrink()
+		{
+			if (4 * edges.Count <= maxEdgeCountSinceRebuild && maxEdgeCountSinceRebuild > 6)
+			{
+				edges = new Map(edges);
+				maxEdgeCountSinceRebuild = edges.Count;
+			}
 		}
 	}
 

@@ -27,48 +27,19 @@ namespace Connectivity.test
 		    _log = log;
 	    }
 
-	    [Theory]
-	    [InlineData(1000, 1000)]
-	    public void TestDictionary(int capacity, int count)
-	    {
-		    var sw = new PerformanceMeasurement();
-		    var rand = new Random();
-		    var dict = new Dictionary<int, int>(capacity);
-		    for (int i = 0; i < count; i++)
-		    {
-			    dict[rand.Next()] = i;
-		    }
-
-		    int hash = 0;
-		    var enumerator = dict.GetEnumerator();
-		    while (true)
-		    {
-			    sw.Start();
-			    bool good = enumerator.MoveNext();
-			    sw.Stop();
-
-			    if (!good)
-				    break;
-
-			    var pair = enumerator.Current;
-			    hash = hash * 31 + pair.Key;
-			    hash = hash * 31 + pair.Value;
-
-		    }
-		    _log.WriteLine(hash.ToString());
-		    _log.WriteLine(sw.ToString());
-	    }
-
 		[Theory]
-		// [InlineData(100000, 300000, 100000, 100000, 11439, 1)]
-		// [InlineData(100000, 1000000, 100000, 100000, 984516, 2)]
-		// [InlineData(1000, 3000, 1000, 1000, 159475, 2)]
-		// [InlineData(10000, 300000, 100000, 100000, 1184, 2)]
-		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 2)]
-		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 1)]
-		[InlineData(100000, 300000, 10000, 100000, 984516, 0, false, 0)]
-		// [InlineData(100, 10000, 1000, 10000, 12580, false)]
-		// [InlineData(100, 10000, 1000, 10000, 12580, true)]
+
+		// compare the performance with or without caching components
+		[InlineData(100000, 300000, 10000, 100000, 12314124, 1, false, 1)]
+		[InlineData(100000, 300000, 10000, 100000, 12314124, 1, false, 0)]
+
+		// test whether the ConnGraph produces correct answers by comparing against a naive version
+		[InlineData(1000, 3000, 100, 10000, 12580, 0, false)]
+		[InlineData(1000, 3000, 100, 10000, 12580, 0, true)]
+		[InlineData(1000, 3000, 100, 10000, 12580, 1, false)]
+		[InlineData(1000, 3000, 100, 10000, 12580, 1, true)]
+		[InlineData(1000, 3000, 100, 10000, 12580, 2, false)]
+		[InlineData(1000, 3000, 100, 10000, 12580, 2, true)]
 		public void TestBenchmark(int nV, int nE, int nQ, int nO, int seed, int queryType = 0, bool naive = false, int type = 1)
 		{
 			if (seed == 0)
@@ -114,6 +85,9 @@ namespace Connectivity.test
 			{
 				AddRandomEdge();
 			}
+			// swA.Start();
+			// graph.Optimize();
+			// swA.Stop();
 			_log.WriteLine($"Init time:   {swA}\n");
 			swA.Reset();
 

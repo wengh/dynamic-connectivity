@@ -96,6 +96,8 @@ namespace Connectivity.test
 
             info1.iteration = iteration;
             info2.iteration = iteration;
+            info1.direction = false;
+            info2.direction = true;
 
             var queue = new Queue<VertexInfo>(new[] {info1, info2});
             while (queue.Count > 0)
@@ -109,6 +111,8 @@ namespace Connectivity.test
                             return true;
                         continue;
                     }
+
+                    next.direction = vert.direction;
                     next.iteration = iteration;
                     queue.Enqueue(next);
                 }
