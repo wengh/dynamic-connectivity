@@ -8,7 +8,7 @@ namespace Connectivity.test
 	{
 		/// <summary>
 		/// An Augmentation that combines two SumAndMaxes into one. </summary>
-		public static readonly IAugmentation augmentation = new AugmentationAnonymousInnerClass();
+		public static readonly IAugmentation AUGMENTATION = new AugmentationAnonymousInnerClass();
 
 		private class AugmentationAnonymousInnerClass : IAugmentation
 		{

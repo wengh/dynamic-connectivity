@@ -62,11 +62,14 @@
         <Compile Include="EulerTourEdge.cs" />
         <Compile Include="EulerTourNode.cs" />
         <Compile Include="EulerTourVertex.cs" />
+        <Compile Include="IConnGraph.cs" />
         <Compile Include="Program.cs" />
         <Compile Include="Properties\AssemblyInfo.cs" />
         <Compile Include="RedBlack\RedBlackNode.cs" />
         <Compile Include="RedBlack\Reference.cs" />
         <Compile Include="Test\ConnGraphTest.cs" />
+        <Compile Include="Test\ConnGraphTest2.cs" />
+        <Compile Include="Test\NaiveConnGraph.cs" />
         <Compile Include="Test\PerformanceMeasurement.cs" />
         <Compile Include="Test\SumAndMax.cs" />
         <Compile Include="VertexInfo.cs" />

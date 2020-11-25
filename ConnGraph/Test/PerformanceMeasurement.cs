@@ -3,6 +3,9 @@ using System.Diagnostics;
 
 namespace Connectivity.test
 {
+    /// <summary>
+    /// A Stopwatch wrapper that can provide total, average and worst time.
+    /// </summary>
     public class PerformanceMeasurement
     {
         private Stopwatch _swTotal = new Stopwatch();
@@ -25,7 +28,7 @@ namespace Connectivity.test
         public TimeSpan Total => _swTotal.Elapsed;
         public TimeSpan Worst { get; private set; } = TimeSpan.Zero;
 
-        public TimeSpan Average => TimeSpan.FromTicks(_swTotal.ElapsedTicks / Times);
+        public TimeSpan Average => TimeSpan.FromTicks(Times != 0 ? _swTotal.ElapsedTicks / Times : -1);
         public long Times { get; private set; }
         public long Exceeding { get; private set; }
         public TimeSpan Threshold { get; set; }

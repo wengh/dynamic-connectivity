@@ -92,7 +92,7 @@ namespace Connectivity
 	 * If the input to a transform is selected uniformly at random, and the transform is a permutation, than the output also
 	 * has a uniform random distribution.
 	 */
-	public class ConnGraph
+	public class ConnGraph : IConnGraph
 	{
 		/// <summary>
 		/// The difference between ceiling of log base 2 of the maximum number of vertices in the graph since the last call
